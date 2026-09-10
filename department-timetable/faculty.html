@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Faculty | Timely</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="app-page" data-page="faculty">
+
+<div class="app-shell">
+
+  <aside class="app-sidebar" id="appSidebar"></aside>
+
+  <main class="app-content" id="protectedContent" hidden>
+
+    <p class="page-eyebrow">Workspace setup</p>
+
+    <div class="app-header">
+
+      <div>
+        <h1>Faculty</h1>
+
+        <p class="page-intro">
+          Manage faculty members, availability and teaching qualifications.
+        </p>
+      </div>
+
+      <button
+        class="primary-button"
+        id="addFacultyButton"
+      >
+        + Add Faculty
+      </button>
+
+    </div>
+
+
+    <!-- Statistics -->
+
+    <section class="metric-grid">
+
+      <div class="metric-card">
+        <div>
+          <span class="metric-label">
+            Total Faculty
+          </span>
+
+          <strong id="totalFaculty">
+            0
+          </strong>
+        </div>
+      </div>
+
+
+      <div class="metric-card">
+        <div>
+          <span class="metric-label">
+            Active
+          </span>
+
+          <strong id="activeFaculty">
+            0
+          </strong>
+        </div>
+      </div>
+
+
+      <div class="metric-card">
+        <div>
+          <span class="metric-label">
+            Inactive
+          </span>
+
+          <strong id="inactiveFaculty">
+            0
+          </strong>
+        </div>
+      </div>
+
+
+      <div class="metric-card">
+        <div>
+          <span class="metric-label">
+            Available Days
+          </span>
+
+          <strong id="facultyDays">
+            0
+          </strong>
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- Faculty List -->
+
+    <section
+      class="dashboard-card"
+      style="padding:24px; margin-top:24px;"
+    >
+
+      <div class="card-heading">
+
+        <div>
+          <p class="section-label">
+            Faculty directory
+          </p>
+
+          <h2>
+            Department Faculty
+          </h2>
+        </div>
+
+        <input
+          type="search"
+          id="facultySearch"
+          class="form-field-input"
+          placeholder="Search faculty..."
+        >
+
+      </div>
+
+
+      <div
+        style="
+          overflow-x:auto;
+          margin-top:22px;
+        "
+      >
+
+        <table class="data-table">
+
+          <thead>
+
+            <tr>
+              <th>Name</th>
+              <th>Employee ID</th>
+              <th>Designation</th>
+              <th>Email</th>
+              <th>Available Days</th>
+              <th>Qualifications</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+
+          </thead>
+
+          <tbody id="facultyTableBody">
+
+            <tr>
+              <td
+                colspan="8"
+                class="empty-state"
+              >
+                Loading faculty...
+              </td>
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+
+  </main>
+
+</div>
+
+
+<!-- Faculty Modal -->
+
+<div
+  id="facultyModal"
+  hidden
+  style="
+    position:fixed;
+    inset:0;
+    background:rgba(20,35,27,.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:1000;
+  "
+>
+
+  <div
+    style="
+      width:min(760px,100%);
+      max-height:90vh;
+      overflow:auto;
+      background:#fff;
+      border-radius:14px;
+      padding:28px;
+    "
+  >
+
+    <div class="card-heading">
+
+      <div>
+
+        <p class="section-label">
+          Faculty configuration
+        </p>
+
+        <h2 id="facultyModalTitle">
+          Add Faculty
+        </h2>
+
+      </div>
+
+
+      <button
+        type="button"
+        id="closeFacultyModal"
+        style="
+          border:0;
+          background:none;
+          font-size:25px;
+          cursor:pointer;
+        "
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <form
+      id="facultyForm"
+      style="margin-top:24px;"
+    >
+
+      <input
+        type="hidden"
+        id="facultyId"
+      >
+
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:16px;
+        "
+      >
+
+        <div class="form-field">
+
+          <label for="facultyName">
+            Faculty Name *
+          </label>
+
+          <input
+            id="facultyName"
+            type="text"
+            required
+            placeholder="Example: Prof. S. C. Kathar"
+          >
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="employeeId">
+            Employee ID
+          </label>
+
+          <input
+            id="employeeId"
+            type="text"
+            placeholder="Optional"
+          >
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="designation">
+            Designation
+          </label>
+
+          <input
+            id="designation"
+            type="text"
+            placeholder="Assistant Professor"
+          >
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="facultyEmail">
+            Email
+          </label>
+
+          <input
+            id="facultyEmail"
+            type="email"
+            placeholder="faculty@college.edu"
+          >
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="workloadLimit">
+            Maximum Weekly Workload
+          </label>
+
+          <input
+            id="workloadLimit"
+            type="number"
+            min="1"
+            max="50"
+            value="20"
+          >
+
+          <small>
+            Maximum teaching periods per week.
+          </small>
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="facultyStatus">
+            Status
+          </label>
+
+          <select id="facultyStatus">
+
+            <option value="true">
+              Active
+            </option>
+
+            <option value="false">
+              Inactive
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <!-- Availability -->
+
+      <div style="margin-top:24px;">
+
+        <p class="section-label">
+          Availability
+        </p>
+
+        <h3>
+          Available Working Days
+        </h3>
+
+        <div
+          style="
+            display:grid;
+            grid-template-columns:repeat(3,minmax(0,1fr));
+            gap:10px;
+            margin-top:12px;
+          "
+        >
+
+          <label>
+            <input
+              type="checkbox"
+              class="faculty-day"
+              value="Monday"
+              checked
+            >
+            Monday
+          </label>
+
+          <label>
+            <input
+              type="checkbox"
+              class="faculty-day"
+              value="Tuesday"
+              checked
+            >
+            Tuesday
+          </label>
+
+          <label>
+            <input
+              type="checkbox"
+              class="faculty-day"
+              value="Wednesday"
+              checked
+            >
+            Wednesday
+          </label>
+
+          <label>
+            <input
+              type="checkbox"
+              class="faculty-day"
+              value="Thursday"
+              checked
+            >
+            Thursday
+          </label>
+
+          <label>
+            <input
+              type="checkbox"
+              class="faculty-day"
+              value="Friday"
+              checked
+            >
+            Friday
+          </label>
+
+          <label>
+            <input
+              type="checkbox"
+              class="faculty-day"
+              value="Saturday"
+            >
+            Saturday
+          </label>
+
+        </div>
+
+      </div>
+
+
+      <!-- Qualifications -->
+
+      <div style="margin-top:24px;">
+
+        <p class="section-label">
+          Teaching qualification
+        </p>
+
+        <h3>
+          Qualified Subjects
+        </h3>
+
+        <p class="page-intro">
+          Select subjects this faculty member is qualified to teach.
+          This is different from the subjects actually assigned to them.
+        </p>
+
+
+        <div
+          id="qualificationList"
+          style="
+            max-height:260px;
+            overflow-y:auto;
+            border:1px solid #ddd;
+            border-radius:10px;
+            padding:14px;
+            margin-top:12px;
+          "
+        >
+
+          Loading subjects...
+
+        </div>
+
+      </div>
+
+
+      <div
+        id="facultyMessage"
+        class="form-message"
+      ></div>
+
+
+      <div
+        style="
+          display:flex;
+          justify-content:flex-end;
+          gap:10px;
+          margin-top:20px;
+        "
+      >
+
+        <button
+          type="button"
+          class="outline-button"
+          id="cancelFacultyButton"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          class="primary-button"
+          id="saveFacultyButton"
+        >
+          Save Faculty
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<script
+  type="module"
+  src="js/faculty.js"
+></script>
+
+</body>
+</html>

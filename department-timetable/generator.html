@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Timetable Generator | Timely</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="app-page" data-page="generator">
+
+<div class="app-shell">
+
+  <aside
+    class="app-sidebar"
+    id="appSidebar"
+  ></aside>
+
+
+  <main
+    class="app-content"
+    id="protectedContent"
+    hidden
+  >
+
+    <p class="page-eyebrow">
+      Automatic scheduling
+    </p>
+
+
+    <div class="app-header">
+
+      <div>
+
+        <h1>
+          Timetable Generator
+        </h1>
+
+        <p class="page-intro">
+          Generate a weekly timetable automatically using subjects,
+          faculty, classrooms and laboratories.
+        </p>
+
+      </div>
+
+    </div>
+
+
+    <!-- SETUP -->
+
+    <section
+      class="dashboard-card"
+      style="padding:24px;margin-top:24px;"
+    >
+
+      <div class="card-heading">
+
+        <div>
+
+          <p class="section-label">
+            Generation setup
+          </p>
+
+          <h2>
+            Academic Details
+          </h2>
+
+          <p class="page-intro">
+            Select the year and semester.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <form
+        id="generatorForm"
+        style="margin-top:24px;"
+      >
+
+        <div
+          style="
+            display:grid;
+            grid-template-columns:repeat(2,minmax(0,1fr));
+            gap:18px;
+          "
+        >
+
+          <div class="form-field">
+
+            <label for="academicYear">
+              Academic Year
+            </label>
+
+            <select
+              id="academicYear"
+              class="form-field-input"
+              required
+            >
+
+              <option value="">
+                Select Year
+              </option>
+
+              <option value="SE">
+                Second Year (SE)
+              </option>
+
+              <option value="TE">
+                Third Year (TE)
+              </option>
+
+              <option value="BE">
+                Final Year (BE)
+              </option>
+
+            </select>
+
+          </div>
+
+
+          <div class="form-field">
+
+            <label for="semester">
+              Semester
+            </label>
+
+            <select
+              id="semester"
+              class="form-field-input"
+              required
+            >
+
+              <option value="">
+                Select Semester
+              </option>
+
+              <option value="3">
+                Semester 3
+              </option>
+
+              <option value="4">
+                Semester 4
+              </option>
+
+              <option value="5">
+                Semester 5
+              </option>
+
+              <option value="6">
+                Semester 6
+              </option>
+
+              <option value="7">
+                Semester 7
+              </option>
+
+              <option value="8">
+                Semester 8
+              </option>
+
+            </select>
+
+          </div>
+
+        </div>
+
+
+        <!-- ELECTIVE SELECTION -->
+
+        <div
+          id="electiveSection"
+          style="
+            margin-top:24px;
+            padding:20px;
+            border:1px solid #e5e7eb;
+            border-radius:12px;
+            display:none;
+          "
+        >
+
+          <div>
+
+            <p class="section-label">
+              Elective selection
+            </p>
+
+            <h3 style="margin:0;">
+              Select Elective Subjects
+            </h3>
+
+            <p class="page-intro">
+              Select one option from each elective group.
+              Alternative options are not counted together.
+            </p>
+
+          </div>
+
+
+          <div
+            id="electiveList"
+            style="margin-top:18px;"
+          ></div>
+
+        </div>
+
+
+        <!-- WORKING DAYS -->
+
+        <div
+          style="
+            margin-top:24px;
+            padding:18px;
+            border:1px solid #e5e7eb;
+            border-radius:12px;
+          "
+        >
+
+          <h3 style="margin:0 0 12px;">
+            Working Days
+          </h3>
+
+          <div
+            style="
+              display:flex;
+              gap:18px;
+              flex-wrap:wrap;
+            "
+          >
+
+            <label>
+              <input
+                type="checkbox"
+                class="working-day"
+                value="Monday"
+                checked
+              >
+              Monday
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                class="working-day"
+                value="Tuesday"
+                checked
+              >
+              Tuesday
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                class="working-day"
+                value="Wednesday"
+                checked
+              >
+              Wednesday
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                class="working-day"
+                value="Thursday"
+                checked
+              >
+              Thursday
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                class="working-day"
+                value="Friday"
+                checked
+              >
+              Friday
+            </label>
+<label>
+  <input
+    type="checkbox"
+    class="working-day"
+    value="Saturday"
+    checked
+  >
+  Saturday
+</label>
+          </div>
+
+        </div>
+        
+
+
+        <!-- PERIOD INFORMATION -->
+
+        <div
+          style="
+            margin-top:24px;
+            padding:18px;
+            border:1px solid #e5e7eb;
+            border-radius:12px;
+          "
+        >
+
+          <h3 style="margin:0 0 12px;">
+            College Timing
+          </h3>
+
+          <div
+            style="
+              display:grid;
+              grid-template-columns:repeat(3,minmax(0,1fr));
+              gap:10px;
+            "
+          >
+
+            <div>
+              <strong>P1</strong><br>
+              <small>10:30 – 11:30</small>
+            </div>
+
+            <div>
+              <strong>P2</strong><br>
+              <small>11:30 – 12:30</small>
+            </div>
+
+            <div>
+              <strong>P3</strong><br>
+              <small>12:30 – 1:30</small>
+            </div>
+
+            <div>
+              <strong>Lunch</strong><br>
+              <small>1:30 – 2:15</small>
+            </div>
+
+            <div>
+              <strong>P4</strong><br>
+              <small>2:15 – 3:15</small>
+            </div>
+
+            <div>
+              <strong>Tea Break</strong><br>
+              <small>3:15 – 3:30</small>
+            </div>
+
+            <div>
+              <strong>P5</strong><br>
+              <small>3:30 – 4:30</small>
+            </div>
+
+            <div>
+              <strong>P6</strong><br>
+              <small>4:30 – 5:30</small>
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- REQUIREMENT SUMMARY -->
+
+        <div
+          id="requirementSummary"
+          style="
+            margin-top:24px;
+            padding:18px;
+            border-radius:12px;
+            background:#f8fafc;
+            border:1px solid #e5e7eb;
+            display:none;
+          "
+        >
+
+          <p class="section-label">
+            Weekly requirement
+          </p>
+
+          <div
+            style="
+              display:grid;
+              grid-template-columns:repeat(4,minmax(0,1fr));
+              gap:12px;
+              margin-top:12px;
+            "
+          >
+
+            <div>
+              <small>Lectures</small>
+              <br>
+              <strong id="requiredLectures">0</strong>
+            </div>
+
+            <div>
+              <small>Tutorials</small>
+              <br>
+              <strong id="requiredTutorials">0</strong>
+            </div>
+
+            <div>
+              <small>Practicals</small>
+              <br>
+              <strong id="requiredPracticals">0</strong>
+            </div>
+
+            <div>
+              <small>Total Periods</small>
+              <br>
+              <strong id="requiredTotal">0</strong>
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- GENERATE -->
+
+        <div
+          style="
+            display:flex;
+            justify-content:flex-end;
+            margin-top:24px;
+          "
+        >
+
+          <button
+            type="submit"
+            class="primary-button"
+            id="generateButton"
+          >
+            Generate Timetable
+          </button>
+
+        </div>
+
+
+        <div
+          id="generatorMessage"
+          class="form-message"
+          style="margin-top:16px;"
+        ></div>
+
+      </form>
+
+    </section>
+
+
+    <!-- STATUS -->
+
+    <section
+      class="dashboard-card"
+      style="padding:24px;margin-top:24px;"
+    >
+
+      <div class="card-heading">
+
+        <div>
+
+          <p class="section-label">
+            Generation status
+          </p>
+
+          <h2>
+            Ready
+          </h2>
+
+          <p
+            class="page-intro"
+            id="generationStatus"
+          >
+            Select an academic year and semester to begin.
+          </p>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+</div>
+
+
+<script
+  type="module"
+  src="js/generator.js"
+></script>
+
+</body>
+</html>

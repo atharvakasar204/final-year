@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Register - Department Timetable</title>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <div class="login-container">
+
+        <div class="login-box">
+
+            <h1>Create Account</h1>
+
+            <p class="subtitle">
+                Department Timetable System
+            </p>
+
+            <form id="registerForm">
+
+                <input
+                    type="text"
+                    id="name"
+                    placeholder="Full Name"
+                    required
+                >
+
+                <input
+                    type="email"
+                    id="email"
+                    placeholder="Email"
+                    required
+                >
+
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="Password"
+                    minlength="6"
+                    required
+                >
+
+                <select id="role" required>
+
+                    <option value="">
+                        Select Role
+                    </option>
+
+                    <option value="admin">
+                        Admin
+                    </option>
+
+                    <option value="hod">
+                        HOD
+                    </option>
+
+                    <option value="faculty">
+                        Faculty
+                    </option>
+
+                </select>
+
+                <button type="submit">
+                    Register
+                </button>
+
+            </form>
+
+            <p id="message"></p>
+
+            <p style="margin-top: 20px;">
+                Already have an account?
+                <a href="index.html">Login</a>
+            </p>
+
+        </div>
+
+    </div>
+
+    <script type="module" src="js/register.js"></script>
+
+</body>
+
+</html>

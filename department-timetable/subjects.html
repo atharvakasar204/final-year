@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Subjects | Timely</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="app-page" data-page="subjects">
+
+<div class="app-shell">
+
+  <aside class="app-sidebar" id="appSidebar"></aside>
+
+  <main class="app-content" id="protectedContent" hidden>
+
+    <p class="eyebrow">Workspace setup</p>
+
+    <div class="app-header">
+      <div>
+        <h1>Subjects</h1>
+        <p class="page-intro">
+          Manage subjects, weekly L/T/P hours, semesters and electives.
+        </p>
+      </div>
+
+      <button class="primary-button" id="addSubjectButton">
+        + Add Subject
+      </button>
+    </div>
+
+
+    <!-- Statistics -->
+
+    <section class="metric-grid">
+
+      <div class="metric-card">
+        <div>
+          <span class="metric-label">Total Subjects</span>
+          <strong id="totalSubjects">0</strong>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div>
+          <span class="metric-label">Theory</span>
+          <strong id="theorySubjects">0</strong>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div>
+          <span class="metric-label">Labs</span>
+          <strong id="labSubjects">0</strong>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div>
+          <span class="metric-label">Electives</span>
+          <strong id="electiveSubjects">0</strong>
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- Filters -->
+
+    <section class="dashboard-card" style="padding:24px; margin-top:24px;">
+
+      <div class="card-heading">
+
+        <div>
+          <p class="section-label">Subject list</p>
+          <h2>Department Subjects</h2>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+
+          <select id="yearFilter" class="form-field-input">
+            <option value="all">All Years</option>
+            <option value="SE">SE</option>
+            <option value="TE">TE</option>
+            <option value="BE">BE</option>
+          </select>
+
+          <select id="semesterFilter" class="form-field-input">
+            <option value="all">All Semesters</option>
+            <option value="3">Semester III</option>
+            <option value="4">Semester IV</option>
+            <option value="5">Semester V</option>
+            <option value="6">Semester VI</option>
+            <option value="7">Semester VII</option>
+            <option value="8">Semester VIII</option>
+          </select>
+
+          <select id="typeFilter" class="form-field-input">
+            <option value="all">All Types</option>
+            <option value="theory">Theory</option>
+            <option value="lab">Lab</option>
+            <option value="seminar">Seminar</option>
+            <option value="project">Project</option>
+            <option value="audit">Audit</option>
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <div style="overflow-x:auto; margin-top:22px;">
+
+        <table class="data-table">
+
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Code</th>
+              <th>Year</th>
+              <th>Semester</th>
+              <th>L</th>
+              <th>T</th>
+              <th>P</th>
+              <th>Type</th>
+              <th>Elective</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+
+          <tbody id="subjectsTableBody">
+
+            <tr>
+              <td colspan="11" class="empty-state">
+                Loading subjects...
+              </td>
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+
+  </main>
+
+</div>
+
+
+<!-- Add/Edit Subject Modal -->
+
+<div
+  id="subjectModal"
+  hidden
+  style="
+    position:fixed;
+    inset:0;
+    background:rgba(20,35,27,.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:1000;
+  "
+>
+
+  <div
+    style="
+      width:min(700px,100%);
+      max-height:90vh;
+      overflow:auto;
+      background:#fff;
+      border-radius:14px;
+      padding:28px;
+    "
+  >
+
+    <div class="card-heading">
+
+      <div>
+        <p class="section-label">Subject configuration</p>
+        <h2 id="modalTitle">Add Subject</h2>
+      </div>
+
+      <button
+        type="button"
+        id="closeModalButton"
+        style="
+          border:0;
+          background:none;
+          font-size:25px;
+          cursor:pointer;
+        "
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <form id="subjectForm" style="margin-top:24px;">
+
+      <input type="hidden" id="subjectId">
+
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:16px;
+        "
+      >
+
+        <div class="form-field">
+
+          <label for="subjectName">
+            Subject Name *
+          </label>
+
+          <input
+            id="subjectName"
+            type="text"
+            required
+            placeholder="Example: Database Management System"
+          >
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="subjectCode">
+            Subject Code
+          </label>
+
+          <input
+            id="subjectCode"
+            type="text"
+            placeholder="Optional"
+          >
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="year">
+            Year *
+          </label>
+
+          <select id="year" required>
+
+            <option value="">Select Year</option>
+            <option value="SE">SE</option>
+            <option value="TE">TE</option>
+            <option value="BE">BE</option>
+
+          </select>
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="semester">
+            Semester *
+          </label>
+
+          <select id="semester" required>
+
+            <option value="">Select Semester</option>
+            <option value="3">III</option>
+            <option value="4">IV</option>
+            <option value="5">V</option>
+            <option value="6">VI</option>
+            <option value="7">VII</option>
+            <option value="8">VIII</option>
+
+          </select>
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="lectureHours">
+            Lecture Hours (L) *
+          </label>
+
+          <input
+            id="lectureHours"
+            type="number"
+            min="0"
+            max="10"
+            value="0"
+            required
+          >
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="tutorialHours">
+            Tutorial Hours (T) *
+          </label>
+
+          <input
+            id="tutorialHours"
+            type="number"
+            min="0"
+            max="10"
+            value="0"
+            required
+          >
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="practicalHours">
+            Practical Hours (P) *
+          </label>
+
+          <input
+            id="practicalHours"
+            type="number"
+            min="0"
+            max="20"
+            value="0"
+            required
+          >
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="subjectType">
+            Subject Type *
+          </label>
+
+          <select id="subjectType" required>
+
+            <option value="theory">Theory</option>
+            <option value="lab">Lab</option>
+            <option value="seminar">Seminar</option>
+            <option value="project">Project</option>
+            <option value="audit">Audit</option>
+
+          </select>
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="electiveGroup">
+            Elective Group
+          </label>
+
+          <select id="electiveGroup">
+
+            <option value="">None</option>
+            <option value="PEC-I">PEC-I</option>
+            <option value="PEC-II">PEC-II</option>
+            <option value="PEC-III">PEC-III</option>
+            <option value="PEC-IV">PEC-IV</option>
+            <option value="OEC-I">OEC-I</option>
+            <option value="OEC-II">OEC-II</option>
+            <option value="OEC-III">OEC-III</option>
+            <option value="HSSMEC-I">HSSMEC-I</option>
+            <option value="HSSMEC-II">HSSMEC-II</option>
+
+          </select>
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="active">
+            Status
+          </label>
+
+          <select id="active">
+
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <div
+        id="subjectMessage"
+        class="form-message"
+      ></div>
+
+
+      <div
+        style="
+          display:flex;
+          justify-content:flex-end;
+          gap:10px;
+          margin-top:15px;
+        "
+      >
+
+        <button
+          type="button"
+          class="outline-button"
+          id="cancelButton"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          class="primary-button"
+          id="saveSubjectButton"
+        >
+          Save Subject
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<script type="module" src="js/subjects.js"></script>
+
+</body>
+</html>

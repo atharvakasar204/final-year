@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Timetable | Timely</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="app-page" data-page="timetable">
+
+<div class="app-shell">
+
+  <aside
+    class="app-sidebar"
+    id="appSidebar"
+  ></aside>
+
+
+  <main
+    class="app-content"
+    id="protectedContent"
+    hidden
+  >
+
+    <p class="page-eyebrow">
+      Weekly schedule
+    </p>
+
+
+    <div class="app-header">
+
+      <div>
+
+        <h1>
+          Timetable
+        </h1>
+
+        <p class="page-intro">
+          View the automatically generated weekly timetable.
+        </p>
+
+      </div>
+
+    </div>
+
+
+    <!-- SELECT TIMETABLE -->
+
+    <section
+      class="dashboard-card"
+      style="padding:24px;margin-top:24px;"
+    >
+
+      <div class="card-heading">
+
+        <div>
+
+          <p class="section-label">
+            Timetable selection
+          </p>
+
+          <h2>
+            Select Academic Details
+          </h2>
+
+        </div>
+
+      </div>
+
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:18px;
+          margin-top:22px;
+        "
+      >
+
+        <div class="form-field">
+
+          <label for="academicYear">
+            Academic Year
+          </label>
+
+          <select
+            id="academicYear"
+            class="form-field-input"
+          >
+
+            <option value="SE">
+              Second Year (SE)
+            </option>
+
+            <option value="TE">
+              Third Year (TE)
+            </option>
+
+            <option value="BE">
+              Final Year (BE)
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="semester">
+            Semester
+          </label>
+
+          <select
+            id="semester"
+            class="form-field-input"
+          >
+
+            <option value="3">
+              Semester 3
+            </option>
+
+            <option value="4">
+              Semester 4
+            </option>
+
+            <option value="5">
+              Semester 5
+            </option>
+
+            <option value="6">
+              Semester 6
+            </option>
+
+            <option value="7">
+              Semester 7
+            </option>
+
+            <option value="8">
+              Semester 8
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <div
+        style="
+          display:flex;
+          justify-content:flex-end;
+          margin-top:20px;
+          gap:10px;
+        "
+      >
+
+        <button
+          type="button"
+          class="outline-button"
+          id="refreshTimetableButton"
+        >
+          Refresh
+        </button>
+
+        <button
+          type="button"
+          class="primary-button"
+          id="printTimetableButton"
+        >
+          Print Timetable
+        </button>
+
+      </div>
+
+
+      <div
+        id="timetableMessage"
+        class="form-message"
+        style="margin-top:16px;"
+      ></div>
+
+    </section>
+
+
+    <!-- TIMETABLE -->
+
+    <section
+      class="dashboard-card"
+      style="
+        padding:24px;
+        margin-top:24px;
+      "
+    >
+
+      <div class="card-heading">
+
+        <div>
+
+          <p class="section-label">
+            Weekly schedule
+          </p>
+
+          <h2 id="timetableTitle">
+            Timetable
+          </h2>
+
+          <p
+            class="page-intro"
+            id="timetableSubtitle"
+          >
+            Select a semester to view the timetable.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div
+        id="timetableContainer"
+        style="
+          overflow-x:auto;
+          margin-top:24px;
+        "
+      >
+
+        <div class="empty-state">
+          Loading timetable...
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- SUMMARY -->
+
+    <section
+      class="metric-grid"
+      style="margin-top:24px;"
+    >
+
+      <div class="metric-card">
+
+        <div>
+
+          <span class="metric-label">
+            Scheduled Classes
+          </span>
+
+          <strong id="scheduledCount">
+            0
+          </strong>
+
+        </div>
+
+      </div>
+
+
+      <div class="metric-card">
+
+        <div>
+
+          <span class="metric-label">
+            Lectures
+          </span>
+
+          <strong id="lectureCount">
+            0
+          </strong>
+
+        </div>
+
+      </div>
+
+
+      <div class="metric-card">
+
+        <div>
+
+          <span class="metric-label">
+            Tutorials
+          </span>
+
+          <strong id="tutorialCount">
+            0
+          </strong>
+
+        </div>
+
+      </div>
+
+
+      <div class="metric-card">
+
+        <div>
+
+          <span class="metric-label">
+            Labs
+          </span>
+
+          <strong id="labCount">
+            0
+          </strong>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+</div>
+
+
+<script
+  type="module"
+  src="js/timetable.js"
+></script>
+
+</body>
+</html>

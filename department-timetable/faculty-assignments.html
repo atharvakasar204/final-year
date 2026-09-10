@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Subject Assignment | Timely</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="app-page" data-page="faculty-assignments">
+
+<div class="app-shell">
+
+  <aside class="app-sidebar" id="appSidebar"></aside>
+
+  <main class="app-content" id="protectedContent" hidden>
+
+    <p class="page-eyebrow">Academic configuration</p>
+
+    <div class="app-header">
+
+      <div>
+        <h1>Subject Assignment</h1>
+
+        <p class="page-intro">
+          Assign the subjects actually taught by each faculty member.
+        </p>
+      </div>
+
+    </div>
+
+
+    <!-- Faculty Selection -->
+
+    <section
+      class="dashboard-card"
+      style="padding:24px;"
+    >
+
+      <div class="card-heading">
+
+        <div>
+          <p class="section-label">
+            Faculty
+          </p>
+
+          <h2>
+            Select Faculty
+          </h2>
+        </div>
+
+      </div>
+
+      <div
+        class="form-field"
+        style="margin-top:18px;"
+      >
+
+        <label for="facultySelect">
+          Faculty Member
+        </label>
+
+        <select
+          id="facultySelect"
+          class="form-field-input"
+        >
+
+          <option value="">
+            Select faculty member
+          </option>
+
+        </select>
+
+      </div>
+
+    </section>
+
+
+    <!-- Assignment Area -->
+
+    <section
+      class="dashboard-card"
+      style="
+        padding:24px;
+        margin-top:24px;
+      "
+      id="assignmentSection"
+      hidden
+    >
+
+      <div class="card-heading">
+
+        <div>
+
+          <p class="section-label">
+            Current teaching assignment
+          </p>
+
+          <h2 id="selectedFacultyName">
+            Faculty
+          </h2>
+
+          <p
+            class="page-intro"
+            id="facultyQualificationInfo"
+          >
+          </p>
+
+        </div>
+
+        <div
+          style="
+            display:flex;
+            gap:8px;
+            flex-wrap:wrap;
+          "
+        >
+
+          <button
+            type="button"
+            class="outline-button"
+            id="selectAllButton"
+          >
+            Select All Qualified
+          </button>
+
+          <button
+            type="button"
+            class="outline-button"
+            id="clearAllButton"
+          >
+            Clear All
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <!-- Filters -->
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:16px;
+          margin-top:22px;
+        "
+      >
+
+        <div class="form-field">
+
+          <label for="yearFilter">
+            Year
+          </label>
+
+          <select
+            id="yearFilter"
+            class="form-field-input"
+          >
+
+            <option value="all">
+              All Years
+            </option>
+
+            <option value="SE">
+              SE
+            </option>
+
+            <option value="TE">
+              TE
+            </option>
+
+            <option value="BE">
+              BE
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="semesterFilter">
+            Semester
+          </label>
+
+          <select
+            id="semesterFilter"
+            class="form-field-input"
+          >
+
+            <option value="all">
+              All Semesters
+            </option>
+
+            <option value="3">
+              Semester 3
+            </option>
+
+            <option value="4">
+              Semester 4
+            </option>
+
+            <option value="5">
+              Semester 5
+            </option>
+
+            <option value="6">
+              Semester 6
+            </option>
+
+            <option value="7">
+              Semester 7
+            </option>
+
+            <option value="8">
+              Semester 8
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <!-- Subject List -->
+
+      <div
+        id="assignmentList"
+        style="
+          margin-top:22px;
+          max-height:500px;
+          overflow-y:auto;
+          border:1px solid #e5e7eb;
+          border-radius:12px;
+        "
+      >
+
+        Select a faculty member first.
+
+      </div>
+
+
+      <div
+        id="assignmentMessage"
+        class="form-message"
+        style="margin-top:18px;"
+      ></div>
+
+
+      <!-- Save -->
+
+      <div
+        style="
+          display:flex;
+          justify-content:flex-end;
+          margin-top:20px;
+        "
+      >
+
+        <button
+          type="button"
+          class="primary-button"
+          id="saveAssignmentsButton"
+        >
+          Save Assignments
+        </button>
+
+      </div>
+
+    </section>
+
+  </main>
+
+</div>
+
+
+<script
+  type="module"
+  src="js/faculty-assignments.js"
+></script>
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Department timetable administration dashboard">
+  <title>Dashboard | Timely</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="app-page" data-page="dashboard">
+  <div class="app-shell">
+    <aside class="app-sidebar" id="appSidebar"></aside>
+    <main class="app-content" id="protectedContent" hidden>
+      <header class="app-header">
+        <div>
+          <p class="page-eyebrow">Overview <span class="eyebrow-dot">•</span> <span id="todayDate"></span></p>
+          <h1>Good to see you, <span data-user-name>Administrator</span>.</h1>
+        </div>
+        <div class="profile-chip" title="Signed-in account">
+          <span class="profile-initial" aria-hidden="true">A</span>
+          <span><strong data-user-name>Administrator</strong><small data-user-email>Department administrator</small></span>
+        </div>
+      </header>
+
+      <section class="metric-grid" aria-label="Department summary">
+        <a class="metric-card" href="faculty.html"><span class="metric-icon icon-green">♙</span><span class="metric-copy"><strong>Faculty</strong><small>Manage department faculty</small></span><span class="metric-value">—</span></a>
+        <a class="metric-card" href="subjects.html"><span class="metric-icon icon-coral">▤</span><span class="metric-copy"><strong>Subjects</strong><small>Configure weekly requirements</small></span><span class="metric-value">—</span></a>
+        <a class="metric-card" href="divisions.html"><span class="metric-icon icon-blue">▦</span><span class="metric-copy"><strong>Divisions</strong><small>Set up classes and batches</small></span><span class="metric-value">—</span></a>
+        <a class="metric-card" href="rooms.html"><span class="metric-icon icon-gold">▯</span><span class="metric-copy"><strong>Rooms & Labs</strong><small>Map available spaces</small></span><span class="metric-value">—</span></a>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="dashboard-card timetable-status">
+          <div class="card-heading"><div><p class="section-label">This week</p><h2>Timetable status</h2></div><a href="generator.html">Open generator <span aria-hidden="true">→</span></a></div>
+          <div class="empty-state compact-empty"><span class="empty-orbit" aria-hidden="true">✦</span><h3>No timetable generated yet</h3><p>Add your department data, then generate a conflict-free weekly schedule.</p><a class="secondary-button" href="generator.html">Go to timetable generator</a></div>
+        </article>
+        <article class="dashboard-card action-card">
+          <div class="card-heading"><div><p class="section-label">Quick start</p><h2>Build your workspace</h2></div></div>
+          <ol class="setup-list">
+            <li><span>01</span><a href="faculty.html">Add faculty members <b>→</b></a></li>
+            <li><span>02</span><a href="subjects.html">Create subjects <b>→</b></a></li>
+            <li><span>03</span><a href="divisions.html">Set up divisions <b>→</b></a></li>
+            <li><span>04</span><a href="rooms.html">Add rooms and labs <b>→</b></a></li>
+          </ol>
+        </article>
+      </section>
+
+      <section class="dashboard-card absence-card">
+        <div><p class="section-label">Today</p><h2>Faculty absences</h2><p>There are no recorded absences today.</p></div>
+        <a class="outline-button" href="substitute.html">Manage absences</a>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>

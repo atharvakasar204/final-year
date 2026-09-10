@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Rooms & Labs | Timely</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="app-page" data-page="rooms">
+
+<div class="app-shell">
+
+  <aside
+    class="app-sidebar"
+    id="appSidebar"
+  ></aside>
+
+
+  <main
+    class="app-content"
+    id="protectedContent"
+    hidden
+  >
+
+    <p class="page-eyebrow">
+      Workspace setup
+    </p>
+
+
+    <div class="app-header">
+
+      <div>
+
+        <h1>
+          Rooms & Labs
+        </h1>
+
+        <p class="page-intro">
+          Manage classrooms, laboratories and lab batches.
+        </p>
+
+      </div>
+
+
+      <div
+        style="
+          display:flex;
+          gap:10px;
+          flex-wrap:wrap;
+        "
+      >
+
+        <button
+          type="button"
+          class="outline-button"
+          id="addClassroomBtn"
+        >
+          + Add Classroom
+        </button>
+
+
+        <button
+          type="button"
+          class="primary-button"
+          id="addLabBtn"
+        >
+          + Add Lab
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <!-- STATISTICS -->
+
+    <section class="metric-grid">
+
+      <div class="metric-card">
+
+        <div>
+
+          <span class="metric-label">
+            Classrooms
+          </span>
+
+          <strong id="classroomCount">
+            0
+          </strong>
+
+        </div>
+
+      </div>
+
+
+      <div class="metric-card">
+
+        <div>
+
+          <span class="metric-label">
+            Laboratories
+          </span>
+
+          <strong id="labCount">
+            0
+          </strong>
+
+        </div>
+
+      </div>
+
+
+      <div class="metric-card">
+
+        <div>
+
+          <span class="metric-label">
+            Total Rooms
+          </span>
+
+          <strong id="totalRoomCount">
+            0
+          </strong>
+
+        </div>
+
+      </div>
+
+
+      <div class="metric-card">
+
+        <div>
+
+          <span class="metric-label">
+            Available
+          </span>
+
+          <strong id="availableCount">
+            0
+          </strong>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ROOM LIST -->
+
+    <section
+      class="dashboard-card"
+      style="
+        padding:24px;
+        margin-top:24px;
+      "
+    >
+
+      <div class="card-heading">
+
+        <div>
+
+          <p class="section-label">
+            Room directory
+          </p>
+
+          <h2>
+            Classrooms & Laboratories
+          </h2>
+
+        </div>
+
+
+        <select
+          id="roomTypeFilter"
+          class="form-field-input"
+          style="max-width:200px;"
+        >
+
+          <option value="all">
+            All Rooms
+          </option>
+
+          <option value="classroom">
+            Classrooms
+          </option>
+
+          <option value="lab">
+            Laboratories
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div
+        style="
+          overflow-x:auto;
+          margin-top:22px;
+        "
+      >
+
+        <table class="data-table">
+
+          <thead>
+
+            <tr>
+
+              <th>
+                Name
+              </th>
+
+              <th>
+                Type
+              </th>
+
+              <th>
+                Capacity
+              </th>
+
+              <th>
+                Location
+              </th>
+
+              <th>
+                Lab Type
+              </th>
+
+              <th>
+                Batches
+              </th>
+
+              <th>
+                Status
+              </th>
+
+              <th>
+                Actions
+              </th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody id="roomsTableBody">
+
+            <tr>
+
+              <td
+                colspan="8"
+                class="empty-state"
+              >
+                Loading rooms...
+
+              </td>
+
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+
+  </main>
+
+</div>
+
+
+<!-- ========================================================= -->
+<!-- ROOM MODAL -->
+<!-- ========================================================= -->
+
+<div
+  id="roomModal"
+  hidden
+  style="
+    position:fixed;
+    inset:0;
+    background:rgba(20,35,27,.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:1000;
+  "
+>
+
+  <div
+    style="
+      width:min(650px,100%);
+      max-height:90vh;
+      overflow:auto;
+      background:#fff;
+      border-radius:14px;
+      padding:28px;
+    "
+  >
+
+    <div class="card-heading">
+
+      <div>
+
+        <p class="section-label">
+          Room configuration
+        </p>
+
+        <h2 id="modalTitle">
+          Add Classroom
+        </h2>
+
+        <p
+          class="page-intro"
+          id="modalDescription"
+        >
+          Enter classroom details.
+        </p>
+
+      </div>
+
+
+      <button
+        type="button"
+        id="closeModalBtn"
+        style="
+          border:0;
+          background:none;
+          font-size:25px;
+          cursor:pointer;
+        "
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <form
+      id="roomForm"
+      style="margin-top:24px;"
+    >
+
+      <input
+        type="hidden"
+        id="roomId"
+      >
+
+
+      <!-- ROOM TYPE -->
+
+      <div class="form-field">
+
+        <label for="roomType">
+          Room Type
+        </label>
+
+        <select
+          id="roomType"
+          class="form-field-input"
+        >
+
+          <option value="classroom">
+            Classroom
+          </option>
+
+          <option value="lab">
+            Laboratory
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <!-- BASIC DETAILS -->
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:16px;
+          margin-top:16px;
+        "
+      >
+
+        <div class="form-field">
+
+          <label for="roomName">
+            Room / Lab Name *
+          </label>
+
+          <input
+            id="roomName"
+            type="text"
+            required
+            placeholder="Example: Room 101"
+          >
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="capacity">
+            Capacity *
+          </label>
+
+          <input
+            id="capacity"
+            type="number"
+            min="1"
+            required
+            placeholder="60"
+          >
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="location">
+            Location
+          </label>
+
+          <input
+            id="location"
+            type="text"
+            placeholder="Example: Ground Floor"
+          >
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="status">
+            Status
+          </label>
+
+          <select
+            id="status"
+            class="form-field-input"
+          >
+
+            <option value="available">
+              Available
+            </option>
+
+            <option value="unavailable">
+              Unavailable
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <!-- LAB TYPE -->
+
+      <div
+        id="labTypeGroup"
+        class="form-field"
+        style="margin-top:16px;"
+        hidden
+      >
+
+        <label for="labType">
+          Laboratory Type
+        </label>
+
+        <input
+          id="labType"
+          type="text"
+          placeholder="Example: Electronics Lab"
+        >
+
+      </div>
+
+
+      <!-- BATCHES -->
+
+      <div
+        id="batchGroup"
+        class="form-field"
+        style="margin-top:16px;"
+        hidden
+      >
+
+        <label for="batches">
+          Lab Batches
+        </label>
+
+        <input
+          id="batches"
+          type="text"
+          placeholder="A1, A2"
+        >
+
+        <small>
+          Enter batches separated by commas.
+          Example: A1, A2
+        </small>
+
+      </div>
+
+
+      <!-- MESSAGE -->
+
+      <div
+        id="formMessage"
+        class="form-message"
+        style="margin-top:16px;"
+      ></div>
+
+
+      <!-- BUTTONS -->
+
+      <div
+        style="
+          display:flex;
+          justify-content:flex-end;
+          gap:10px;
+          margin-top:22px;
+        "
+      >
+
+        <button
+          type="button"
+          class="outline-button"
+          id="cancelBtn"
+        >
+          Cancel
+        </button>
+
+
+        <button
+          type="submit"
+          class="primary-button"
+          id="saveRoomBtn"
+        >
+          Save
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<script
+  type="module"
+  src="js/rooms-labs.js"
+></script>
+
+</body>
+</html>
