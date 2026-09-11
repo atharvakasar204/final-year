@@ -1,7 +1,13 @@
 // ============================================================
 // TIMELY - SUBJECT MANAGEMENT
-// Complete subjects.js
+// subjects.js
 // Firebase 12.1.0
+//
+// IMPORTANT:
+// - NO default/built-in subjects
+// - NO automatic subject seeding
+// - All subjects are added manually by the user
+// - Delete is permanent from Firestore
 // ============================================================
 
 import {
@@ -10,7 +16,6 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  setDoc,
   onSnapshot,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
@@ -36,972 +41,6 @@ let editingSubjectId = null;
 
 
 // ============================================================
-// BUILT-IN SUBJECT LIST
-// Based on the course structure provided for the project.
-// Subject codes are intentionally left blank because reliable
-// codes were not provided in the source material.
-// ============================================================
-
-const BUILT_IN_SUBJECTS = [
-
-  // ==========================================================
-  // SEMESTER III - SE
-  // ==========================================================
-
-  {
-    name: "Engineering Mathematics-III",
-    year: "SE",
-    semester: 3,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: null
-  },
-
-  {
-    name: "Electronics Devices & Circuits",
-    year: "SE",
-    semester: 3,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: null
-  },
-
-  {
-    name: "Programming, Data Structure & Algorithm using C",
-    year: "SE",
-    semester: 3,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: null
-  },
-
-  {
-    name: "Computer Architecture & Operating System",
-    year: "SE",
-    semester: 3,
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: null
-  },
-
-  {
-    name: "Digital Electronics and Microprocessor",
-    year: "SE",
-    semester: 3,
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: null
-  },
-
-  {
-    name: "Lab & Programming, Data Structure and Algorithm using C",
-    year: "SE",
-    semester: 3,
-    lectureHours: 0,
-    tutorialHours: 0,
-    practicalHours: 4,
-    type: "lab",
-    electiveGroup: null
-  },
-
-  {
-    name: "Seminar-I",
-    year: "SE",
-    semester: 3,
-    lectureHours: 0,
-    tutorialHours: 0,
-    practicalHours: 4,
-    type: "seminar",
-    electiveGroup: null
-  },
-
-
-  // ==========================================================
-  // SEMESTER IV - SE
-  // ==========================================================
-
-  {
-    name: "Python Programming",
-    year: "SE",
-    semester: 4,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: null
-  },
-
-  {
-    name: "Database Management System",
-    year: "SE",
-    semester: 4,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: null
-  },
-
-  {
-    name: "Basic Human Rights",
-    year: "SE",
-    semester: 4,
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: null
-  },
-
-  {
-    name: "Probability Theory and Random Processes",
-    year: "SE",
-    semester: 4,
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: null
-  },
-
-  {
-    name: "Professional Elective Course-I",
-    year: "SE",
-    semester: 4,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-I"
-  },
-
-  {
-    name: "Python Programming Lab & Database Management System Lab",
-    year: "SE",
-    semester: 4,
-    lectureHours: 0,
-    tutorialHours: 0,
-    practicalHours: 4,
-    type: "lab",
-    electiveGroup: null
-  },
-
-  {
-    name: "Seminar-II",
-    year: "SE",
-    semester: 4,
-    lectureHours: 0,
-    tutorialHours: 0,
-    practicalHours: 4,
-    type: "seminar",
-    electiveGroup: null
-  },
-
-
-  // PEC-I OPTIONS
-
-  {
-    name: "Microcontroller and Advanced Processor",
-    year: "SE",
-    semester: 4,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-I"
-  },
-
-  {
-    name: "Data Analysis",
-    year: "SE",
-    semester: 4,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-I"
-  },
-
-  {
-    name: "Electromagnetic Engineering and Wave Propagation",
-    year: "SE",
-    semester: 4,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-I"
-  },
-
-  {
-    name: "Linux OS",
-    year: "SE",
-    semester: 4,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-I"
-  },
-
-
-  // ==========================================================
-  // SEMESTER V - TE
-  // ==========================================================
-
-  {
-    name: "Computer Networks",
-    year: "TE",
-    semester: 5,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: null
-  },
-
-  {
-    name: "Digital Signal & Image Processing",
-    year: "TE",
-    semester: 5,
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: null
-  },
-
-  {
-    name: "Professional Elective Course-II",
-    year: "TE",
-    semester: 5,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-II"
-  },
-
-  {
-    name: "Open Elective Course-I",
-    year: "TE",
-    semester: 5,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "OEC-I"
-  },
-
-  {
-    name: "Humanities/Social Sciences including Management Elective-I",
-    year: "TE",
-    semester: 5,
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "HSSMEC-I"
-  },
-
-  {
-    name: "Computer Networks and Cloud Computing Lab and Competitive Programming Lab",
-    year: "TE",
-    semester: 5,
-    lectureHours: 0,
-    tutorialHours: 0,
-    practicalHours: 4,
-    type: "lab",
-    electiveGroup: null
-  },
-
-  {
-    name: "Mini Project-I",
-    year: "TE",
-    semester: 5,
-    lectureHours: 0,
-    tutorialHours: 0,
-    practicalHours: 4,
-    type: "project",
-    electiveGroup: null
-  },
-
-
-  // PEC-II OPTIONS
-
-  {
-    name: "Sensors and Robotics Technology",
-    year: "TE",
-    semester: 5,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-II"
-  },
-
-  {
-    name: "Data Warehouse & Data Mining",
-    year: "TE",
-    semester: 5,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-II"
-  },
-
-  {
-    name: "Wireless & Mobile Computing",
-    year: "TE",
-    semester: 5,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-II"
-  },
-
-  {
-    name: "Software Engineering",
-    year: "TE",
-    semester: 5,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-II"
-  },
-
-
-  // OEC-I OPTIONS
-
-  {
-    name: "Microelectronics Devices and Circuits",
-    year: "TE",
-    semester: 5,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "OEC-I"
-  },
-
-  {
-    name: "Analog & Digital Communication",
-    year: "TE",
-    semester: 5,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "OEC-I"
-  },
-
-  {
-    name: "Programming in JAVA",
-    year: "TE",
-    semester: 5,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "OEC-I"
-  },
-
-  {
-    name: "Electrical Machines and Instrumentation",
-    year: "TE",
-    semester: 5,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "OEC-I"
-  },
-
-
-  // HSSMEC-I OPTIONS
-
-  {
-    name: "Economics and Management",
-    year: "TE",
-    semester: 5,
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "HSSMEC-I"
-  },
-
-  {
-    name: "Business Communication",
-    year: "TE",
-    semester: 5,
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "HSSMEC-I"
-  },
-
-
-  // ==========================================================
-  // SEMESTER VI - TE
-  // ==========================================================
-
-  {
-    name: "Internet of Things",
-    year: "TE",
-    semester: 6,
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: null
-  },
-
-  {
-    name: "Artificial Intelligence and Machine Learning",
-    year: "TE",
-    semester: 6,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: null
-  },
-
-  {
-    name: "Professional Elective Course-III",
-    year: "TE",
-    semester: 6,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-III"
-  },
-
-  {
-    name: "Open Elective Course-II",
-    year: "TE",
-    semester: 6,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "OEC-II"
-  },
-
-  {
-    name: "Humanities/Social Sciences including Management Elective-II",
-    year: "TE",
-    semester: 6,
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "HSSMEC-II"
-  },
-
-  {
-    name: "Internet of Things Lab and AI/ML Lab",
-    year: "TE",
-    semester: 6,
-    lectureHours: 0,
-    tutorialHours: 0,
-    practicalHours: 4,
-    type: "lab",
-    electiveGroup: null
-  },
-
-  {
-    name: "Mini Project-II",
-    year: "TE",
-    semester: 6,
-    lectureHours: 0,
-    tutorialHours: 0,
-    practicalHours: 4,
-    type: "project",
-    electiveGroup: null
-  },
-
-
-  // PEC-III OPTIONS
-
-  {
-    name: "Industrial Automation and Control (PLC)",
-    year: "TE",
-    semester: 6,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-III"
-  },
-
-  {
-    name: "Big Data Analytics",
-    year: "TE",
-    semester: 6,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-III"
-  },
-
-  {
-    name: "Microwave and Optical Fibre Communication",
-    year: "TE",
-    semester: 6,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-III"
-  },
-
-  {
-    name: "Software Testing",
-    year: "TE",
-    semester: 6,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-III"
-  },
-
-
-  // OEC-II OPTIONS
-
-  {
-    name: "VLSI Design",
-    year: "TE",
-    semester: 6,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "OEC-II"
-  },
-
-  {
-    name: "Information Theory & Coding",
-    year: "TE",
-    semester: 6,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "OEC-II"
-  },
-
-  {
-    name: "Android Programming",
-    year: "TE",
-    semester: 6,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "OEC-II"
-  },
-
-  {
-    name: "Electrical Drives and Instrumentation",
-    year: "TE",
-    semester: 6,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "OEC-II"
-  },
-
-
-  // HSSMEC-II OPTIONS
-
-  {
-    name: "Development Engineering",
-    year: "TE",
-    semester: 6,
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "HSSMEC-II"
-  },
-
-  {
-    name: "Employability and Skill Development",
-    year: "TE",
-    semester: 6,
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "HSSMEC-II"
-  },
-
-  {
-    name: "Consumer Behaviour",
-    year: "TE",
-    semester: 6,
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "HSSMEC-II"
-  },
-
-
-  // ==========================================================
-  // SEMESTER VII - BE
-  // ==========================================================
-
-  {
-    name: "Industry 4.0 and Automation",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: null
-  },
-
-  {
-    name: "Deep Learning",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: null
-  },
-
-  {
-    name: "DevOps (Development & Operations)",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: null
-  },
-
-  {
-    name: "Professional Elective Course-IV",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-IV"
-  },
-
-  {
-    name: "Open Elective Course-III",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "OEC-III"
-  },
-
-  {
-    name: "Humanities/Social Sciences including Management Elective-II",
-    year: "BE",
-    semester: 7,
-    lectureHours: 0,
-    tutorialHours: 0,
-    practicalHours: 4,
-    type: "seminar",
-    electiveGroup: "HSSMEC-II"
-  },
-
-  {
-    name: "DevOps Lab and Deep Learning Lab",
-    year: "BE",
-    semester: 7,
-    lectureHours: 0,
-    tutorialHours: 0,
-    practicalHours: 4,
-    type: "lab",
-    electiveGroup: null
-  },
-
-  {
-    name: "Project Work",
-    year: "BE",
-    semester: 7,
-    lectureHours: 0,
-    tutorialHours: 0,
-    practicalHours: 4,
-    type: "project",
-    electiveGroup: null
-  },
-
-
-  // PEC-IV OPTIONS
-
-  {
-    name: "Automotive Electronics",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-IV"
-  },
-
-  {
-    name: "Consumer Electronics",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-IV"
-  },
-
-  {
-    name: "Satellite & Radar Engineering",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-IV"
-  },
-
-  {
-    name: "Web Development",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-IV"
-  },
-
-  {
-    name: "Data Science",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "PEC-IV"
-  },
-
-
-  // OEC-III OPTIONS
-
-  {
-    name: "Nano Technology",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "OEC-III"
-  },
-
-  {
-    name: "Cyber Security & Blockchain Technology",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "OEC-III"
-  },
-
-  {
-    name: "IOS Programming",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "OEC-III"
-  },
-
-  {
-    name: "Renewable Energy Sources",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "OEC-III"
-  },
-
-  {
-    name: "Smart Grid Introduction and Application",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 1,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "OEC-III"
-  },
-
-
-  // HSSMEC OPTIONS
-
-  {
-    name: "Foreign Language Studies",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "HSSMEC-II"
-  },
-
-  {
-    name: "Universal Human Values",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "HSSMEC-II"
-  },
-
-  {
-    name: "Intellectual Property Rights",
-    year: "BE",
-    semester: 7,
-    lectureHours: 3,
-    tutorialHours: 0,
-    practicalHours: 0,
-    type: "theory",
-    electiveGroup: "HSSMEC-II"
-  },
-
-
-  // ==========================================================
-  // SEMESTER VIII - BE
-  // ==========================================================
-
-  {
-    name: "Project Work / Internship",
-    year: "BE",
-    semester: 8,
-    lectureHours: 0,
-    tutorialHours: 0,
-    practicalHours: 24,
-    type: "project",
-    electiveGroup: null
-  }
-
-];
-
-
-// ============================================================
-// CREATE STABLE FIRESTORE ID
-// ============================================================
-
-function createSubjectId(subject) {
-
-  return (
-    `${subject.year}_${subject.semester}_` +
-    subject.name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "")
-      .substring(0, 80)
-  );
-
-}
-
-
-// ============================================================
-// SEED BUILT-IN SUBJECTS
-// ============================================================
-
-async function seedBuiltInSubjects() {
-
-  for (const subject of BUILT_IN_SUBJECTS) {
-
-    const subjectId =
-      createSubjectId(subject);
-
-    const subjectRef =
-      doc(
-        db,
-        "subjects",
-        subjectId
-      );
-
-    await setDoc(
-      subjectRef,
-      {
-        ...subject,
-
-        code: "",
-
-        weeklyHours:
-          subject.lectureHours +
-          subject.tutorialHours +
-          subject.practicalHours,
-
-        active: true,
-
-        source:
-          "built-in-course-structure",
-
-        updatedAt:
-          serverTimestamp()
-      },
-      {
-        merge: true
-      }
-    );
-
-  }
-
-  console.log(
-    "Built-in subject list loaded."
-  );
-
-}
-
-
-// ============================================================
 // INITIALISE PAGE
 // ============================================================
 
@@ -1011,17 +50,20 @@ async function initialisePage() {
 
   await requireAuthenticatedUser();
 
-  document
-    .querySelector("#protectedContent")
-    .removeAttribute("hidden");
+  const protectedContent =
+    document.querySelector("#protectedContent");
+
+  if (protectedContent) {
+    protectedContent.removeAttribute("hidden");
+  }
 
   enableSignOut();
 
   setupEvents();
 
-  // Automatically put built-in subjects into Firestore.
-  await seedBuiltInSubjects();
-
+  // IMPORTANT:
+  // There is NO seedBuiltInSubjects() here.
+  // Subjects are loaded only from Firestore.
   listenForSubjects();
 
 }
@@ -1033,66 +75,43 @@ async function initialisePage() {
 
 function setupEvents() {
 
-  const addButton =
-    document.querySelector(
-      "#addSubjectButton"
-    );
-
-  if (addButton) {
-
-    addButton.addEventListener(
+  // Add Subject
+  document
+    .querySelector("#addSubjectButton")
+    ?.addEventListener(
       "click",
       () => openModal()
     );
 
-  }
 
-
-  const closeButton =
-    document.querySelector(
-      "#closeModalButton"
-    );
-
-  if (closeButton) {
-
-    closeButton.addEventListener(
+  // Close modal
+  document
+    .querySelector("#closeModalButton")
+    ?.addEventListener(
       "click",
       closeModal
     );
 
-  }
 
-
-  const cancelButton =
-    document.querySelector(
-      "#cancelButton"
-    );
-
-  if (cancelButton) {
-
-    cancelButton.addEventListener(
+  // Cancel
+  document
+    .querySelector("#cancelButton")
+    ?.addEventListener(
       "click",
       closeModal
     );
 
-  }
 
-
-  const form =
-    document.querySelector(
-      "#subjectForm"
-    );
-
-  if (form) {
-
-    form.addEventListener(
+  // Form submit
+  document
+    .querySelector("#subjectForm")
+    ?.addEventListener(
       "submit",
       saveSubject
     );
 
-  }
 
-
+  // Filters
   document
     .querySelector("#yearFilter")
     ?.addEventListener(
@@ -1117,6 +136,7 @@ function setupEvents() {
     );
 
 
+  // Table actions
   document
     .querySelector("#subjectsTableBody")
     ?.addEventListener(
@@ -1128,21 +148,47 @@ function setupEvents() {
 
 
 // ============================================================
-// LOAD SUBJECTS
+// LOAD SUBJECTS FROM FIRESTORE
 // ============================================================
 
 function listenForSubjects() {
 
+  const tbody =
+    document.querySelector(
+      "#subjectsTableBody"
+    );
+
+
+  if (tbody) {
+
+    tbody.innerHTML = `
+      <tr>
+        <td
+          colspan="11"
+          class="empty-state"
+        >
+          Loading subjects...
+        </td>
+      </tr>
+    `;
+
+  }
+
+
   onSnapshot(
+
     subjectsCollection,
 
     snapshot => {
 
       subjects =
-        snapshot.docs.map(item => ({
-          id: item.id,
-          ...item.data()
-        }));
+        snapshot.docs.map(
+          item => ({
+            id: item.id,
+            ...item.data()
+          })
+        );
+
 
       renderSubjects();
 
@@ -1157,10 +203,6 @@ function listenForSubjects() {
         error
       );
 
-      const tbody =
-        document.querySelector(
-          "#subjectsTableBody"
-        );
 
       if (tbody) {
 
@@ -1178,6 +220,7 @@ function listenForSubjects() {
       }
 
     }
+
   );
 
 }
@@ -1193,6 +236,7 @@ function openModal(subject = null) {
     document.querySelector(
       "#subjectModal"
     );
+
 
   if (!modal) {
     return;
@@ -1212,90 +256,198 @@ function openModal(subject = null) {
   form?.reset();
 
 
-  document.querySelector(
-    "#modalTitle"
-  ).textContent =
-    subject
-      ? "Edit Subject"
-      : "Add Subject";
+  const modalTitle =
+    document.querySelector(
+      "#modalTitle"
+    );
 
 
-  document.querySelector(
-    "#subjectId"
-  ).value =
-    subject?.id || "";
+  if (modalTitle) {
+
+    modalTitle.textContent =
+      subject
+        ? "Edit Subject"
+        : "Add Subject";
+
+  }
 
 
-  document.querySelector(
-    "#subjectName"
-  ).value =
-    subject?.name || "";
+  const subjectId =
+    document.querySelector(
+      "#subjectId"
+    );
 
 
-  document.querySelector(
-    "#subjectCode"
-  ).value =
-    subject?.code || "";
+  if (subjectId) {
+
+    subjectId.value =
+      subject?.id || "";
+
+  }
 
 
-  document.querySelector(
-    "#year"
-  ).value =
-    subject?.year || "";
+  const subjectName =
+    document.querySelector(
+      "#subjectName"
+    );
 
 
-  document.querySelector(
-    "#semester"
-  ).value =
-    subject?.semester || "";
+  if (subjectName) {
+
+    subjectName.value =
+      subject?.name || "";
+
+  }
 
 
-  document.querySelector(
-    "#lectureHours"
-  ).value =
-    subject?.lectureHours ?? 0;
+  const subjectCode =
+    document.querySelector(
+      "#subjectCode"
+    );
 
 
-  document.querySelector(
-    "#tutorialHours"
-  ).value =
-    subject?.tutorialHours ?? 0;
+  if (subjectCode) {
+
+    subjectCode.value =
+      subject?.code || "";
+
+  }
 
 
-  document.querySelector(
-    "#practicalHours"
-  ).value =
-    subject?.practicalHours ?? 0;
+  const year =
+    document.querySelector(
+      "#year"
+    );
 
 
-  document.querySelector(
-    "#subjectType"
-  ).value =
-    subject?.type || "theory";
+  if (year) {
+
+    year.value =
+      subject?.year || "";
+
+  }
 
 
-  document.querySelector(
-    "#electiveGroup"
-  ).value =
-    subject?.electiveGroup || "";
+  const semester =
+    document.querySelector(
+      "#semester"
+    );
 
 
-  document.querySelector(
-    "#active"
-  ).value =
-    subject?.active === false
-      ? "false"
-      : "true";
+  if (semester) {
+
+    semester.value =
+      subject?.semester || "";
+
+  }
 
 
-  document.querySelector(
-    "#subjectMessage"
-  ).textContent = "";
+  const lectureHours =
+    document.querySelector(
+      "#lectureHours"
+    );
+
+
+  if (lectureHours) {
+
+    lectureHours.value =
+      subject?.lectureHours ?? 0;
+
+  }
+
+
+  const tutorialHours =
+    document.querySelector(
+      "#tutorialHours"
+    );
+
+
+  if (tutorialHours) {
+
+    tutorialHours.value =
+      subject?.tutorialHours ?? 0;
+
+  }
+
+
+  const practicalHours =
+    document.querySelector(
+      "#practicalHours"
+    );
+
+
+  if (practicalHours) {
+
+    practicalHours.value =
+      subject?.practicalHours ?? 0;
+
+  }
+
+
+  const subjectType =
+    document.querySelector(
+      "#subjectType"
+    );
+
+
+  if (subjectType) {
+
+    subjectType.value =
+      subject?.type || "theory";
+
+  }
+
+
+  const electiveGroup =
+    document.querySelector(
+      "#electiveGroup"
+    );
+
+
+  if (electiveGroup) {
+
+    electiveGroup.value =
+      subject?.electiveGroup || "";
+
+  }
+
+
+  const active =
+    document.querySelector(
+      "#active"
+    );
+
+
+  if (active) {
+
+    active.value =
+      subject?.active === false
+        ? "false"
+        : "true";
+
+  }
+
+
+  const message =
+    document.querySelector(
+      "#subjectMessage"
+    );
+
+
+  if (message) {
+
+    message.textContent = "";
+
+    message.className =
+      "form-message";
+
+  }
 
 
   modal.removeAttribute(
     "hidden"
   );
+
 
   modal.style.display =
     "flex";
@@ -1314,6 +466,7 @@ function closeModal() {
       "#subjectModal"
     );
 
+
   if (!modal) {
     return;
   }
@@ -1323,6 +476,7 @@ function closeModal() {
     "hidden",
     ""
   );
+
 
   modal.style.display =
     "none";
@@ -1342,8 +496,14 @@ function closeModal() {
       "#subjectMessage"
     );
 
+
   if (message) {
+
     message.textContent = "";
+
+    message.className =
+      "form-message";
+
   }
 
 }
@@ -1363,16 +523,21 @@ async function saveSubject(event) {
       "#saveSubjectButton"
     );
 
+
   const message =
     document.querySelector(
       "#subjectMessage"
     );
 
 
-  button.disabled = true;
+  if (button) {
 
-  button.textContent =
-    "Saving...";
+    button.disabled = true;
+
+    button.textContent =
+      "Saving...";
+
+  }
 
 
   try {
@@ -1380,28 +545,28 @@ async function saveSubject(event) {
     const name =
       document
         .querySelector("#subjectName")
-        .value
-        .trim();
+        ?.value
+        .trim() || "";
 
 
     const code =
       document
         .querySelector("#subjectCode")
-        .value
-        .trim();
+        ?.value
+        .trim() || "";
 
 
     const year =
       document
         .querySelector("#year")
-        .value;
+        ?.value || "";
 
 
     const semester =
       Number(
         document
           .querySelector("#semester")
-          .value
+          ?.value
       );
 
 
@@ -1409,7 +574,7 @@ async function saveSubject(event) {
       Number(
         document
           .querySelector("#lectureHours")
-          .value
+          ?.value
       );
 
 
@@ -1417,7 +582,7 @@ async function saveSubject(event) {
       Number(
         document
           .querySelector("#tutorialHours")
-          .value
+          ?.value
       );
 
 
@@ -1425,31 +590,31 @@ async function saveSubject(event) {
       Number(
         document
           .querySelector("#practicalHours")
-          .value
+          ?.value
       );
 
 
     const type =
       document
         .querySelector("#subjectType")
-        .value;
+        ?.value || "theory";
 
 
     const electiveGroup =
       document
         .querySelector("#electiveGroup")
-        .value;
+        ?.value || "";
 
 
     const active =
       document
         .querySelector("#active")
-        .value === "true";
+        ?.value === "true";
 
 
-    // --------------------------------------------------------
+    // ========================================================
     // VALIDATION
-    // --------------------------------------------------------
+    // ========================================================
 
     if (!name) {
 
@@ -1504,9 +669,9 @@ async function saveSubject(event) {
     }
 
 
-    // --------------------------------------------------------
+    // ========================================================
     // SUBJECT DATA
-    // --------------------------------------------------------
+    // ========================================================
 
     const subjectData = {
 
@@ -1545,19 +710,22 @@ async function saveSubject(event) {
     };
 
 
-    // --------------------------------------------------------
-    // UPDATE
-    // --------------------------------------------------------
+    // ========================================================
+    // UPDATE EXISTING SUBJECT
+    // ========================================================
 
     if (editingSubjectId) {
 
       await updateDoc(
+
         doc(
           db,
           "subjects",
           editingSubjectId
         ),
+
         subjectData
+
       );
 
 
@@ -1569,9 +737,9 @@ async function saveSubject(event) {
     }
 
 
-    // --------------------------------------------------------
-    // ADD
-    // --------------------------------------------------------
+    // ========================================================
+    // ADD NEW SUBJECT
+    // ========================================================
 
     else {
 
@@ -1593,6 +761,7 @@ async function saveSubject(event) {
     }
 
 
+    // Close after successful save
     setTimeout(
       closeModal,
       500
@@ -1616,10 +785,14 @@ async function saveSubject(event) {
 
   } finally {
 
-    button.disabled = false;
+    if (button) {
 
-    button.textContent =
-      "Save Subject";
+      button.disabled = false;
+
+      button.textContent =
+        "Save Subject";
+
+    }
 
   }
 
@@ -1636,6 +809,7 @@ function renderSubjects() {
     document.querySelector(
       "#subjectsTableBody"
     );
+
 
   if (!tbody) {
     return;
@@ -1661,41 +835,43 @@ function renderSubjects() {
 
 
   const filtered =
-    subjects.filter(subject => {
+    subjects.filter(
+      subject => {
 
-      if (
-        year !== "all" &&
-        subject.year !== year
-      ) {
+        if (
+          year !== "all" &&
+          subject.year !== year
+        ) {
 
-        return false;
+          return false;
+
+        }
+
+
+        if (
+          semester !== "all" &&
+          String(subject.semester) !== semester
+        ) {
+
+          return false;
+
+        }
+
+
+        if (
+          type !== "all" &&
+          subject.type !== type
+        ) {
+
+          return false;
+
+        }
+
+
+        return true;
 
       }
-
-
-      if (
-        semester !== "all" &&
-        String(subject.semester) !== semester
-      ) {
-
-        return false;
-
-      }
-
-
-      if (
-        type !== "all" &&
-        subject.type !== type
-      ) {
-
-        return false;
-
-      }
-
-
-      return true;
-
-    });
+    );
 
 
   if (filtered.length === 0) {
@@ -1745,100 +921,102 @@ function renderSubjects() {
 
   tbody.innerHTML =
     filtered
-      .map(subject => {
+      .map(
+        subject => {
 
-        const elective =
-          subject.electiveGroup ||
-          "—";
-
-
-        const status =
-          subject.active === false
-            ? "Inactive"
-            : "Active";
+          const elective =
+            subject.electiveGroup ||
+            "—";
 
 
-        return `
-          <tr>
+          const status =
+            subject.active === false
+              ? "Inactive"
+              : "Active";
 
-            <td>
-              <strong>
+
+          return `
+            <tr>
+
+              <td>
+                <strong>
+                  ${escapeHtml(
+                    subject.name || ""
+                  )}
+                </strong>
+              </td>
+
+              <td>
                 ${escapeHtml(
-                  subject.name || ""
+                  subject.code || "—"
                 )}
-              </strong>
-            </td>
+              </td>
 
-            <td>
-              ${escapeHtml(
-                subject.code || "—"
-              )}
-            </td>
+              <td>
+                ${escapeHtml(
+                  subject.year || "—"
+                )}
+              </td>
 
-            <td>
-              ${escapeHtml(
-                subject.year || "—"
-              )}
-            </td>
+              <td>
+                ${subject.semester || "—"}
+              </td>
 
-            <td>
-              ${subject.semester || "—"}
-            </td>
+              <td>
+                ${subject.lectureHours ?? 0}
+              </td>
 
-            <td>
-              ${subject.lectureHours ?? 0}
-            </td>
+              <td>
+                ${subject.tutorialHours ?? 0}
+              </td>
 
-            <td>
-              ${subject.tutorialHours ?? 0}
-            </td>
+              <td>
+                ${subject.practicalHours ?? 0}
+              </td>
 
-            <td>
-              ${subject.practicalHours ?? 0}
-            </td>
+              <td>
+                ${formatType(
+                  subject.type
+                )}
+              </td>
 
-            <td>
-              ${formatType(
-                subject.type
-              )}
-            </td>
+              <td>
+                ${escapeHtml(
+                  elective
+                )}
+              </td>
 
-            <td>
-              ${escapeHtml(
-                elective
-              )}
-            </td>
+              <td>
+                ${status}
+              </td>
 
-            <td>
-              ${status}
-            </td>
+              <td>
 
-            <td>
+                <button
+                  type="button"
+                  class="outline-button"
+                  data-action="edit"
+                  data-id="${escapeHtml(subject.id)}"
+                >
+                  Edit
+                </button>
 
-              <button
-                type="button"
-                class="outline-button"
-                data-action="edit"
-                data-id="${subject.id}"
-              >
-                Edit
-              </button>
+                <button
+                  type="button"
+                  class="outline-button"
+                  data-action="delete"
+                  data-id="${escapeHtml(subject.id)}"
+                >
+                  Delete
+                </button>
 
-              <button
-                type="button"
-                class="outline-button"
-                data-action="delete"
-                data-id="${subject.id}"
-              >
-                Delete
-              </button>
+              </td>
 
-            </td>
+            </tr>
+          `;
 
-          </tr>
-        `;
-
-      })
+        }
+      )
       .join("");
 
 }
@@ -1861,16 +1039,26 @@ function handleTableAction(event) {
   }
 
 
+  const subjectId =
+    button.dataset.id;
+
+
   const subject =
     subjects.find(
       item =>
-        item.id ===
-        button.dataset.id
+        item.id === subjectId
     );
 
 
   if (!subject) {
+
+    console.error(
+      "Subject not found:",
+      subjectId
+    );
+
     return;
+
   }
 
 
@@ -1904,7 +1092,7 @@ async function deleteSubject(subject) {
 
   const confirmed =
     window.confirm(
-      `Delete "${subject.name}"?`
+      `Delete "${subject.name}" permanently?`
     );
 
 
@@ -1915,12 +1103,32 @@ async function deleteSubject(subject) {
 
   try {
 
+    // Delete directly from Firestore.
     await deleteDoc(
       doc(
         db,
         "subjects",
         subject.id
       )
+    );
+
+
+    // Remove immediately from local array.
+    subjects =
+      subjects.filter(
+        item =>
+          item.id !== subject.id
+      );
+
+
+    // Update UI immediately.
+    renderSubjects();
+
+    updateStatistics();
+
+
+    console.log(
+      `Subject deleted permanently: ${subject.name}`
     );
 
 
@@ -1933,6 +1141,7 @@ async function deleteSubject(subject) {
 
 
     alert(
+      error.message ||
       "Unable to delete subject."
     );
 
@@ -1999,26 +1208,34 @@ function updateStatistics() {
 
 
   if (totalElement) {
+
     totalElement.textContent =
       total;
+
   }
 
 
   if (theoryElement) {
+
     theoryElement.textContent =
       theory;
+
   }
 
 
   if (labElement) {
+
     labElement.textContent =
       labs;
+
   }
 
 
   if (electiveElement) {
+
     electiveElement.textContent =
       electives;
+
   }
 
 }
@@ -2124,18 +1341,20 @@ function escapeHtml(value) {
 // ============================================================
 
 initialisePage()
-  .catch(error => {
+  .catch(
+    error => {
 
-    if (
-      error.message !==
-      "Firebase has not been configured."
-    ) {
+      if (
+        error.message !==
+        "Firebase has not been configured."
+      ) {
 
-      console.error(
-        "Subjects page error:",
-        error
-      );
+        console.error(
+          "Subjects page error:",
+          error
+        );
+
+      }
 
     }
-
-  });
+  );
