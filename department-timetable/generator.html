@@ -1,25 +1,345 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Timetable Generator | Timely</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <title>
+    Timetable Generator | Timely
+  </title>
+
+
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+  >
+
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+  >
+
 
   <link
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
     rel="stylesheet"
   >
 
-  <link rel="stylesheet" href="css/style.css">
+
+  <link
+    rel="stylesheet"
+    href="css/style.css"
+  >
+
+
+  <style>
+
+    /* -------------------------------------------------------
+       GENERATION SCOPE
+    ------------------------------------------------------- */
+
+    .generation-scope-box {
+
+      margin-top: 24px;
+
+      padding: 18px;
+
+      border: 1px solid #e5e7eb;
+
+      border-radius: 12px;
+
+      background: #ffffff;
+
+    }
+
+
+    .generation-scope-options {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(
+          3,
+          minmax(0, 1fr)
+        );
+
+      gap: 12px;
+
+      margin-top: 12px;
+
+    }
+
+
+    .generation-scope-option {
+
+      display: flex;
+
+      align-items: flex-start;
+
+      gap: 10px;
+
+      padding: 14px;
+
+      border: 1px solid #e5e7eb;
+
+      border-radius: 10px;
+
+      cursor: pointer;
+
+      transition:
+        border-color .2s ease,
+        background .2s ease;
+
+    }
+
+
+    .generation-scope-option:hover {
+
+      border-color: #cbd5e1;
+
+      background: #f8fafc;
+
+    }
+
+
+    .generation-scope-option input {
+
+      margin-top: 3px;
+
+    }
+
+
+    .generation-scope-option strong {
+
+      display: block;
+
+    }
+
+
+    .generation-scope-option small {
+
+      display: block;
+
+      margin-top: 4px;
+
+      color: #64748b;
+
+      line-height: 1.4;
+
+    }
+
+
+    /* -------------------------------------------------------
+       TEACHER SUMMARY
+    ------------------------------------------------------- */
+
+    .teacher-requirement-summary {
+
+      margin-top: 18px;
+
+      padding-top: 18px;
+
+      border-top: 1px solid #e5e7eb;
+
+    }
+
+
+    .teacher-semester-card {
+
+      padding: 16px;
+
+      margin-top: 12px;
+
+      border: 1px solid #e5e7eb;
+
+      border-radius: 10px;
+
+      background: #ffffff;
+
+    }
+
+
+    .teacher-semester-title {
+
+      font-weight: 700;
+
+      font-size: 16px;
+
+      margin-bottom: 12px;
+
+    }
+
+
+    .teacher-stats {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(
+          4,
+          minmax(0, 1fr)
+        );
+
+      gap: 10px;
+
+    }
+
+
+    .teacher-stat {
+
+      padding: 10px;
+
+      border-radius: 8px;
+
+      background: #f8fafc;
+
+    }
+
+
+    .teacher-stat small {
+
+      display: block;
+
+      color: #64748b;
+
+      margin-bottom: 4px;
+
+    }
+
+
+    .teacher-stat strong {
+
+      font-size: 18px;
+
+    }
+
+
+    .teacher-list {
+
+      margin-top: 14px;
+
+    }
+
+
+    .teacher-list-title {
+
+      font-weight: 600;
+
+      margin-bottom: 7px;
+
+    }
+
+
+    .teacher-list ul {
+
+      margin: 0;
+
+      padding-left: 20px;
+
+    }
+
+
+    .teacher-list li {
+
+      margin-bottom: 4px;
+
+    }
+
+
+    .teacher-warning {
+
+      margin-top: 12px;
+
+      padding: 10px 12px;
+
+      border-radius: 8px;
+
+      background: #fff7ed;
+
+      border: 1px solid #fed7aa;
+
+      color: #9a3412;
+
+    }
+
+
+    .teacher-success {
+
+      margin-top: 12px;
+
+      padding: 10px 12px;
+
+      border-radius: 8px;
+
+      background: #f0fdf4;
+
+      border: 1px solid #bbf7d0;
+
+      color: #166534;
+
+    }
+
+
+    .teacher-neutral {
+
+      margin-top: 12px;
+
+      padding: 10px 12px;
+
+      border-radius: 8px;
+
+      background: #f8fafc;
+
+      border: 1px solid #e2e8f0;
+
+      color: #475569;
+
+    }
+
+
+    @media (max-width: 800px) {
+
+      .generation-scope-options {
+
+        grid-template-columns: 1fr;
+
+      }
+
+
+      .teacher-stats {
+
+        grid-template-columns:
+          repeat(
+            2,
+            minmax(0, 1fr)
+          );
+
+      }
+
+    }
+
+  </style>
+
 </head>
 
-<body class="app-page" data-page="generator">
+
+<body
+  class="app-page"
+  data-page="generator"
+>
+
 
 <div class="app-shell">
+
+
+  <!-- SIDEBAR -->
 
   <aside
     class="app-sidebar"
@@ -27,11 +347,14 @@
   ></aside>
 
 
+  <!-- CONTENT -->
+
   <main
     class="app-content"
     id="protectedContent"
     hidden
   >
+
 
     <p class="page-eyebrow">
       Automatic scheduling
@@ -47,8 +370,8 @@
         </h1>
 
         <p class="page-intro">
-          Generate a weekly timetable automatically using subjects,
-          faculty, classrooms and laboratories.
+          Generate a weekly timetable automatically using
+          subjects, faculty, classrooms and laboratories.
         </p>
 
       </div>
@@ -56,12 +379,15 @@
     </div>
 
 
-    <!-- SETUP -->
+    <!-- ===================================================
+         SETUP
+    ==================================================== -->
 
     <section
       class="dashboard-card"
       style="padding:24px;margin-top:24px;"
     >
+
 
       <div class="card-heading">
 
@@ -76,7 +402,7 @@
           </h2>
 
           <p class="page-intro">
-            Select the year and semester.
+            Select the generation scope and academic details.
           </p>
 
         </div>
@@ -89,95 +415,217 @@
         style="margin-top:24px;"
       >
 
-        <div
-          style="
-            display:grid;
-            grid-template-columns:repeat(2,minmax(0,1fr));
-            gap:18px;
-          "
-        >
 
-          <div class="form-field">
+        <!-- GENERATION SCOPE -->
 
-            <label for="academicYear">
-              Academic Year
+        <div class="generation-scope-box">
+
+          <p class="section-label">
+            Generation scope
+          </p>
+
+          <h3 style="margin:0;">
+            Choose Timetable Generation
+          </h3>
+
+          <p class="page-intro">
+
+            Generate one semester or coordinate multiple
+            semesters together to prevent faculty clashes.
+
+          </p>
+
+
+          <div class="generation-scope-options">
+
+
+            <label class="generation-scope-option">
+
+              <input
+                type="radio"
+                name="generationScope"
+                value="single"
+                checked
+              >
+
+              <span>
+
+                <strong>
+                  Single Semester
+                </strong>
+
+                <small>
+                  Generate only the selected semester.
+                </small>
+
+              </span>
+
             </label>
 
-            <select
-              id="academicYear"
-              class="form-field-input"
-              required
-            >
 
-              <option value="">
-                Select Year
-              </option>
+            <label class="generation-scope-option">
 
-              <option value="SE">
-                Second Year (SE)
-              </option>
+              <input
+                type="radio"
+                name="generationScope"
+                value="odd"
+              >
 
-              <option value="TE">
-                Third Year (TE)
-              </option>
+              <span>
 
-              <option value="BE">
-                Final Year (BE)
-              </option>
+                <strong>
+                  All Odd Semesters
+                </strong>
 
-            </select>
+                <small>
+                  SE-3 + TE-5 + BE-7 together.
+                </small>
 
-          </div>
+              </span>
 
-
-          <div class="form-field">
-
-            <label for="semester">
-              Semester
             </label>
 
-            <select
-              id="semester"
-              class="form-field-input"
-              required
-            >
 
-              <option value="">
-                Select Semester
-              </option>
+            <label class="generation-scope-option">
 
-              <option value="3">
-                Semester 3
-              </option>
+              <input
+                type="radio"
+                name="generationScope"
+                value="even"
+              >
 
-              <option value="4">
-                Semester 4
-              </option>
+              <span>
 
-              <option value="5">
-                Semester 5
-              </option>
+                <strong>
+                  All Even Semesters
+                </strong>
 
-              <option value="6">
-                Semester 6
-              </option>
+                <small>
+                  SE-4 + TE-6 + BE-8 together.
+                </small>
 
-              <option value="7">
-                Semester 7
-              </option>
+              </span>
 
-              <option value="8">
-                Semester 8
-              </option>
+            </label>
 
-            </select>
 
           </div>
 
         </div>
 
 
-        <!-- ELECTIVE SELECTION -->
+        <!-- ACADEMIC DETAILS -->
+
+        <div
+          id="academicDetailsBox"
+          style="
+            margin-top:24px;
+          "
+        >
+
+          <div
+            style="
+              display:grid;
+              grid-template-columns:
+                repeat(
+                  2,
+                  minmax(0,1fr)
+                );
+              gap:18px;
+            "
+          >
+
+
+            <!-- YEAR -->
+
+            <div class="form-field">
+
+              <label for="academicYear">
+                Academic Year
+              </label>
+
+
+              <select
+                id="academicYear"
+                class="form-field-input"
+              >
+
+                <option value="">
+                  Select Year
+                </option>
+
+                <option value="SE">
+                  Second Year (SE)
+                </option>
+
+                <option value="TE">
+                  Third Year (TE)
+                </option>
+
+                <option value="BE">
+                  Final Year (BE)
+                </option>
+
+              </select>
+
+            </div>
+
+
+            <!-- SEMESTER -->
+
+            <div class="form-field">
+
+              <label for="semester">
+                Semester
+              </label>
+
+
+              <select
+                id="semester"
+                class="form-field-input"
+              >
+
+                <option value="">
+                  Select Semester
+                </option>
+
+                <option value="3">
+                  Semester 3
+                </option>
+
+                <option value="4">
+                  Semester 4
+                </option>
+
+                <option value="5">
+                  Semester 5
+                </option>
+
+                <option value="6">
+                  Semester 6
+                </option>
+
+                <option value="7">
+                  Semester 7
+                </option>
+
+                <option value="8">
+                  Semester 8
+                </option>
+
+              </select>
+
+            </div>
+
+
+          </div>
+
+        </div>
+
+
+        <!-- =================================================
+             ELECTIVE SELECTION
+        ================================================== -->
 
         <div
           id="electiveSection"
@@ -190,15 +638,18 @@
           "
         >
 
+
           <div>
 
             <p class="section-label">
               Elective selection
             </p>
 
+
             <h3 style="margin:0;">
               Select Elective Subjects
             </h3>
+
 
             <p class="page-intro">
               Select one option from each elective group.
@@ -213,10 +664,13 @@
             style="margin-top:18px;"
           ></div>
 
+
         </div>
 
 
-        <!-- WORKING DAYS -->
+        <!-- =================================================
+             WORKING DAYS
+        ================================================== -->
 
         <div
           style="
@@ -231,6 +685,7 @@
             Working Days
           </h3>
 
+
           <div
             style="
               display:flex;
@@ -239,71 +694,99 @@
             "
           >
 
+
             <label>
+
               <input
                 type="checkbox"
                 class="working-day"
                 value="Monday"
                 checked
               >
+
               Monday
+
             </label>
 
+
             <label>
+
               <input
                 type="checkbox"
                 class="working-day"
                 value="Tuesday"
                 checked
               >
+
               Tuesday
+
             </label>
 
+
             <label>
+
               <input
                 type="checkbox"
                 class="working-day"
                 value="Wednesday"
                 checked
               >
+
               Wednesday
+
             </label>
 
+
             <label>
+
               <input
                 type="checkbox"
                 class="working-day"
                 value="Thursday"
                 checked
               >
+
               Thursday
+
             </label>
 
+
             <label>
+
               <input
                 type="checkbox"
                 class="working-day"
                 value="Friday"
                 checked
               >
+
               Friday
+
             </label>
-<label>
-  <input
-    type="checkbox"
-    class="working-day"
-    value="Saturday"
-    checked
-  >
-  Saturday
-</label>
+
+
+            <label>
+
+              <input
+                type="checkbox"
+                class="working-day"
+                value="Saturday"
+                checked
+              >
+
+              Saturday
+
+            </label>
+
+
           </div>
 
         </div>
-        
 
 
-        <!-- PERIOD INFORMATION -->
+        <!-- =================================================
+             PERIOD INFORMATION
+        ================================================== -->
 
         <div
           style="
@@ -318,60 +801,92 @@
             College Timing
           </h3>
 
+
           <div
             style="
               display:grid;
-              grid-template-columns:repeat(3,minmax(0,1fr));
+              grid-template-columns:
+                repeat(
+                  3,
+                  minmax(0,1fr)
+                );
               gap:10px;
             "
           >
 
+
             <div>
               <strong>P1</strong><br>
-              <small>10:30 – 11:30</small>
+              <small>
+                10:30 – 11:30
+              </small>
             </div>
+
 
             <div>
               <strong>P2</strong><br>
-              <small>11:30 – 12:30</small>
+              <small>
+                11:30 – 12:30
+              </small>
             </div>
+
 
             <div>
               <strong>P3</strong><br>
-              <small>12:30 – 1:30</small>
+              <small>
+                12:30 – 1:30
+              </small>
             </div>
+
 
             <div>
               <strong>Lunch</strong><br>
-              <small>1:30 – 2:15</small>
+              <small>
+                1:30 – 2:15
+              </small>
             </div>
+
 
             <div>
               <strong>P4</strong><br>
-              <small>2:15 – 3:15</small>
+              <small>
+                2:15 – 3:15
+              </small>
             </div>
+
 
             <div>
               <strong>Tea Break</strong><br>
-              <small>3:15 – 3:30</small>
+              <small>
+                3:15 – 3:30
+              </small>
             </div>
+
 
             <div>
               <strong>P5</strong><br>
-              <small>3:30 – 4:30</small>
+              <small>
+                3:30 – 4:30
+              </small>
             </div>
+
 
             <div>
               <strong>P6</strong><br>
-              <small>4:30 – 5:30</small>
+              <small>
+                4:30 – 5:30
+              </small>
             </div>
+
 
           </div>
 
         </div>
 
 
-        <!-- REQUIREMENT SUMMARY -->
+        <!-- =================================================
+             REQUIREMENT SUMMARY
+        ================================================== -->
 
         <div
           id="requirementSummary"
@@ -385,49 +900,105 @@
           "
         >
 
+
           <p class="section-label">
             Weekly requirement
           </p>
 
+
           <div
             style="
               display:grid;
-              grid-template-columns:repeat(4,minmax(0,1fr));
+              grid-template-columns:
+                repeat(
+                  4,
+                  minmax(0,1fr)
+                );
               gap:12px;
               margin-top:12px;
             "
           >
 
-            <div>
-              <small>Lectures</small>
-              <br>
-              <strong id="requiredLectures">0</strong>
-            </div>
 
             <div>
-              <small>Tutorials</small>
+
+              <small>
+                Lectures
+              </small>
+
               <br>
-              <strong id="requiredTutorials">0</strong>
+
+              <strong id="requiredLectures">
+                0
+              </strong>
+
             </div>
 
-            <div>
-              <small>Practicals</small>
-              <br>
-              <strong id="requiredPracticals">0</strong>
-            </div>
 
             <div>
-              <small>Total Periods</small>
+
+              <small>
+                Tutorials
+              </small>
+
               <br>
-              <strong id="requiredTotal">0</strong>
+
+              <strong id="requiredTutorials">
+                0
+              </strong>
+
             </div>
+
+
+            <div>
+
+              <small>
+                Practicals
+              </small>
+
+              <br>
+
+              <strong id="requiredPracticals">
+                0
+              </strong>
+
+            </div>
+
+
+            <div>
+
+              <small>
+                Total Periods
+              </small>
+
+              <br>
+
+              <strong id="requiredTotal">
+                0
+              </strong>
+
+            </div>
+
 
           </div>
+
+
+          <!-- =================================================
+               NEW TEACHER INFORMATION
+          ================================================== -->
+
+          <div
+            id="teacherRequirementSummary"
+            class="teacher-requirement-summary"
+          ></div>
+
 
         </div>
 
 
-        <!-- GENERATE -->
+        <!-- =================================================
+             GENERATE
+        ================================================== -->
 
         <div
           style="
@@ -454,17 +1025,22 @@
           style="margin-top:16px;"
         ></div>
 
+
       </form>
+
 
     </section>
 
 
-    <!-- STATUS -->
+    <!-- =====================================================
+         STATUS
+    ====================================================== -->
 
     <section
       class="dashboard-card"
       style="padding:24px;margin-top:24px;"
     >
+
 
       <div class="card-heading">
 
@@ -474,9 +1050,11 @@
             Generation status
           </p>
 
+
           <h2>
             Ready
           </h2>
+
 
           <p
             class="page-intro"
@@ -489,7 +1067,9 @@
 
       </div>
 
+
     </section>
+
 
   </main>
 
@@ -501,5 +1081,7 @@
   src="js/generator.js"
 ></script>
 
+
 </body>
+
 </html>

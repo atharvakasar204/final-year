@@ -1,109 +1,224 @@
 // ============================================================
 // TIMELY - AUTOMATIC TIMETABLE GENERATOR
+// generator.js
+//
+// FEATURES
+// ------------------------------------------------------------
+// Single semester generation
+// All odd semesters together: SE-3 + TE-5 + BE-7
+// All even semesters together: SE-4 + TE-6 + BE-8
+//
+// L/T/P subject hours
+// Elective selection
+// Faculty assignment from facultyAssignments
+// Faculty availability
+// Faculty clash prevention
+// Student/cohort clash prevention
+// Classroom clash prevention
+// Laboratory clash prevention
+// Valid 2-hour lab blocks
+// Cross-semester coordination
+// Faculty workload balancing
+// Minimum teacher calculation
+// Saves generated timetable to Firestore
+//
+// Subjects are entered manually.
+// No subject seeding is performed.
 // ============================================================
 
+
 import {
+
   collection,
+
   getDocs,
+
   doc,
+
   setDoc,
+
   serverTimestamp
+
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
 
 import { db } from "./firebase.js";
 
+
 import {
+
   requireAuthenticatedUser,
+
   enableSignOut
+
 } from "./auth-guard.js";
 
-import { renderNavigation } from "./layout.js";
+
+import {
+  renderNavigation
+} from "./layout.js";
+
 
 // ============================================================
 // FIRESTORE COLLECTIONS
 // ============================================================
 
-const subjectsCollection = collection(db, "subjects");
-const facultyCollection = collection(db, "faculty");
-const roomsCollection = collection(db, "rooms");
+const subjectsCollection =
+  collection(
+    db,
+    "subjects"
+  );
+
+
+const facultyCollection =
+  collection(
+    db,
+    "faculty"
+  );
+
+
+const roomsCollection =
+  collection(
+    db,
+    "rooms"
+  );
+
+
 const facultyAssignmentsCollection =
-  collection(db, "facultyAssignments");
+  collection(
+    db,
+    "facultyAssignments"
+  );
+
+
 const timetablesCollection =
-  collection(db, "timetables");
+  collection(
+    db,
+    "timetables"
+  );
+
 
 // ============================================================
-// DAYS / PERIODS
+// DAYS
 // ============================================================
 
 const DAYS = [
+
   "Monday",
+
   "Tuesday",
+
   "Wednesday",
+
   "Thursday",
+
   "Friday",
+
   "Saturday"
+
 ];
 
+
+// ============================================================
+// PERIODS
+// ============================================================
+
 const PERIODS = [
+
   {
     id: "P1",
+    label: "P1",
     start: "10:30",
     end: "11:30",
     time: "10:30 - 11:30"
   },
+
   {
     id: "P2",
+    label: "P2",
     start: "11:30",
     end: "12:30",
     time: "11:30 - 12:30"
   },
+
   {
     id: "P3",
+    label: "P3",
     start: "12:30",
     end: "13:30",
     time: "12:30 - 1:30"
   },
+
   {
     id: "P4",
+    label: "P4",
     start: "14:15",
     end: "15:15",
     time: "2:15 - 3:15"
   },
+
   {
     id: "P5",
+    label: "P5",
     start: "15:30",
     end: "16:30",
     time: "3:30 - 4:30"
   },
+
   {
     id: "P6",
+    label: "P6",
     start: "16:30",
     end: "17:30",
     time: "4:30 - 5:30"
   }
+
 ];
 
-// Valid 2-hour blocks only.
-const TWO_HOUR_BLOCKS = [
-  ["P1", "P2"],
-  ["P2", "P3"],
-  ["P5", "P6"]
-];
-
-const MAX_ATTEMPTS = 150;
 
 // ============================================================
-// GLOBAL DATA
+// VALID 2-HOUR LAB BLOCKS
+// ============================================================
+//
+// P4 + P5 is NOT allowed because tea break is between them.
+// ============================================================
+
+const LAB_BLOCKS = [
+
+  ["P1", "P2"],
+
+  ["P2", "P3"],
+
+  ["P5", "P6"]
+
+];
+
+
+// ============================================================
+// SETTINGS
+// ============================================================
+
+const MAX_GENERATION_ATTEMPTS = 120;
+
+
+// ============================================================
+// GLOBAL STATE
 // ============================================================
 
 let allSubjects = [];
+
 let allFaculty = [];
+
 let allRooms = [];
+
 let allFacultyAssignments = [];
+
 let existingTimetables = [];
 
 let electiveGroups = {};
+
 let selectedWorkingDays = [...DAYS];
+
 
 // ============================================================
 // INITIALISE
@@ -111,50 +226,49 @@ let selectedWorkingDays = [...DAYS];
 
 async function initialisePage() {
 
-  try {
+  renderNavigation();
 
-    renderNavigation();
 
-    await requireAuthenticatedUser();
+  await requireAuthenticatedUser();
 
-    const protectedContent =
-      document.querySelector("#protectedContent");
 
-    if (protectedContent) {
-      protectedContent.removeAttribute("hidden");
-    }
-
-    enableSignOut();
-
-    setupEvents();
-
-    await loadData();
-
-    updateWorkingDays();
-    updateElectiveUI();
-    updateRequirementSummary();
-
-    showStatus(
-      "Setup data loaded successfully.",
-      "success"
+  const protectedContent =
+    document.querySelector(
+      "#protectedContent"
     );
 
-  } catch (error) {
 
-    console.error(
-      "Generator initialisation error:",
-      error
-    );
+  if (protectedContent) {
 
-    showMessage(
-      error.message ||
-      "Unable to initialise timetable generator.",
-      "error"
+    protectedContent.removeAttribute(
+      "hidden"
     );
 
   }
 
+
+  enableSignOut();
+
+
+  setupEvents();
+
+
+  await loadData();
+
+
+  updateWorkingDays();
+
+
+  updateGenerationScopeUI();
+
+
+  updateElectiveUI();
+
+
+  updateRequirementSummary();
+
 }
+
 
 // ============================================================
 // EVENTS
@@ -162,208 +276,330 @@ async function initialisePage() {
 
 function setupEvents() {
 
-  const year =
-    document.querySelector("#academicYear");
-
-  const semester =
-    document.querySelector("#semester");
-
-  const form =
-    document.querySelector("#generatorForm");
-
-  const electiveList =
-    document.querySelector("#electiveList");
-
-  year?.addEventListener(
-    "change",
-    () => {
-
-      updateElectiveUI();
-      updateRequirementSummary();
-      clearMessage();
-
-    }
-  );
-
-  semester?.addEventListener(
-    "change",
-    () => {
-
-      updateElectiveUI();
-      updateRequirementSummary();
-      clearMessage();
-
-    }
-  );
 
   document
-    .querySelectorAll(".working-day")
-    .forEach(box => {
+    .querySelectorAll(
+      'input[name="generationScope"]'
+    )
+    .forEach(
+      radio => {
 
-      box.addEventListener(
-        "change",
-        () => {
+        radio.addEventListener(
+          "change",
+          () => {
 
-          updateWorkingDays();
-          updateRequirementSummary();
+            updateGenerationScopeUI();
 
-        }
-      );
+            updateElectiveUI();
 
-    });
+            updateRequirementSummary();
 
-  electiveList?.addEventListener(
-    "change",
-    () => {
+          }
+        );
 
-      updateRequirementSummary();
+      }
+    );
 
-    }
-  );
 
-  // IMPORTANT:
-  // generator.html uses:
-  // <form id="generatorForm">
-  // <button type="submit">
-  //
-  // Therefore handle SUBMIT, not only CLICK.
+  document
+    .querySelector(
+      "#academicYear"
+    )
+    ?.addEventListener(
+      "change",
+      () => {
 
-  form?.addEventListener(
-    "submit",
-    async event => {
+        updateElectiveUI();
 
-      event.preventDefault();
-      event.stopPropagation();
+        updateRequirementSummary();
 
-      await generateTimetable();
+      }
+    );
 
-    }
-  );
+
+  document
+    .querySelector(
+      "#semester"
+    )
+    ?.addEventListener(
+      "change",
+      () => {
+
+        updateElectiveUI();
+
+        updateRequirementSummary();
+
+      }
+    );
+
+
+  document
+    .querySelectorAll(
+      ".working-day"
+    )
+    .forEach(
+      checkbox => {
+
+        checkbox.addEventListener(
+          "change",
+          () => {
+
+            updateWorkingDays();
+
+            updateRequirementSummary();
+
+          }
+        );
+
+      }
+    );
+
+
+  document
+    .querySelector(
+      "#electiveList"
+    )
+    ?.addEventListener(
+      "change",
+      () => {
+
+        updateRequirementSummary();
+
+      }
+    );
+
+
+  document
+    .querySelector(
+      "#generatorForm"
+    )
+    ?.addEventListener(
+      "submit",
+      event => {
+
+        event.preventDefault();
+
+        generateTimetables();
+
+      }
+    );
 
 }
 
+
 // ============================================================
-// LOAD DATA
+// LOAD FIRESTORE DATA
 // ============================================================
 
 async function loadData() {
 
   showStatus(
-    "Loading subjects, faculty, rooms and assignments...",
+    "Loading subjects, faculty, assignments and rooms...",
     "info"
   );
+
 
   try {
 
     const [
+
       subjectsSnapshot,
+
       facultySnapshot,
+
       roomsSnapshot,
+
       assignmentsSnapshot,
+
       timetablesSnapshot
+
     ] = await Promise.all([
 
-      getDocs(subjectsCollection),
-      getDocs(facultyCollection),
-      getDocs(roomsCollection),
-      getDocs(facultyAssignmentsCollection),
-      getDocs(timetablesCollection)
+      getDocs(
+        subjectsCollection
+      ),
+
+      getDocs(
+        facultyCollection
+      ),
+
+      getDocs(
+        roomsCollection
+      ),
+
+      getDocs(
+        facultyAssignmentsCollection
+      ),
+
+      getDocs(
+        timetablesCollection
+      )
 
     ]);
 
+
+    // --------------------------------------------------------
+    // SUBJECTS
+    // --------------------------------------------------------
+
     allSubjects =
       subjectsSnapshot.docs
-        .map(item => ({
-          id: item.id,
-          ...item.data()
-        }))
-        .filter(item =>
-          item.active !== false
+        .map(
+          item => ({
+
+            id:
+              item.id,
+
+            ...item.data()
+
+          })
+        )
+        .filter(
+          subject =>
+            subject.active !== false
         );
+
+
+    // --------------------------------------------------------
+    // FACULTY
+    // --------------------------------------------------------
 
     allFaculty =
       facultySnapshot.docs
-        .map(item => ({
-          id: item.id,
-          ...item.data()
-        }))
-        .filter(item =>
-          item.active !== false
+        .map(
+          item => ({
+
+            id:
+              item.id,
+
+            ...item.data()
+
+          })
+        )
+        .filter(
+          member =>
+            member.active !== false
         );
+
+
+    // --------------------------------------------------------
+    // ROOMS
+    // --------------------------------------------------------
 
     allRooms =
       roomsSnapshot.docs
-        .map(item => ({
-          id: item.id,
-          ...item.data()
-        }))
-        .filter(item => {
+        .map(
+          item => ({
 
-          const status =
-            String(
-              item.status ||
-              "available"
-            ).toLowerCase();
+            id:
+              item.id,
 
-          return (
-            status !== "unavailable" &&
-            status !== "inactive"
-          );
+            ...item.data()
 
-        })
-        .map(normalizeRoom);
+          })
+        )
+        .filter(
+          room => {
+
+            const status =
+              String(
+                room.status ||
+                "available"
+              )
+                .toLowerCase();
+
+
+            return (
+              status !== "inactive" &&
+              status !== "unavailable"
+            );
+
+          }
+        )
+        .map(
+          normalizeRoom
+        );
+
+
+    // --------------------------------------------------------
+    // FACULTY ASSIGNMENTS
+    // --------------------------------------------------------
 
     allFacultyAssignments =
       assignmentsSnapshot.docs
-        .map(item => ({
-          id: item.id,
-          ...item.data()
-        }));
+        .map(
+          item => ({
+
+            id:
+              item.id,
+
+            ...item.data()
+
+          })
+        );
+
+
+    // --------------------------------------------------------
+    // EXISTING TIMETABLES
+    // --------------------------------------------------------
 
     existingTimetables =
       timetablesSnapshot.docs
-        .map(item => ({
-          id: item.id,
-          ...item.data()
-        }));
+        .map(
+          item => ({
+
+            id:
+              item.id,
+
+            ...item.data()
+
+          })
+        );
+
 
     console.log(
       "Subjects:",
       allSubjects
     );
 
+
     console.log(
       "Faculty:",
       allFaculty
     );
+
 
     console.log(
       "Rooms:",
       allRooms
     );
 
+
     console.log(
       "Faculty Assignments:",
       allFacultyAssignments
     );
+
 
     console.log(
       "Existing Timetables:",
       existingTimetables
     );
 
+
+    showStatus(
+      "Setup data loaded successfully.",
+      "success"
+    );
+
+
   } catch (error) {
 
     console.error(
-      "Firebase loading error:",
+      "Data loading error:",
       error
     );
 
-    showMessage(
-      "Unable to load Firebase data: " +
-      error.message,
-      "error"
-    );
 
     throw error;
 
@@ -371,36 +607,252 @@ async function loadData() {
 
 }
 
+
 // ============================================================
-// ROOM NORMALIZATION
+// NORMALIZE ROOM
 // ============================================================
 
-function normalizeRoom(room) {
-
-  const type =
-    String(
-      room.type || ""
-    )
-    .trim()
-    .toLowerCase();
+function normalizeRoom(
+  room
+) {
 
   return {
 
     ...room,
 
+    name:
+      room.name ||
+      room.roomName ||
+      room.number ||
+      room.id,
+
     type:
-      type === "lab"
-        ? "lab"
-        : "classroom",
+      String(
+        room.type ||
+        "classroom"
+      )
+        .trim()
+        .toLowerCase(),
+
+    capacity:
+      Number(
+        room.capacity ||
+        0
+      ),
+
+    labType:
+      room.labType ||
+      "",
 
     batches:
-      Array.isArray(room.batches)
-        ? room.batches
-        : []
+      Array.isArray(
+        room.batches
+      )
+        ? [
+            ...room.batches
+          ]
+        : [],
+
+    status:
+      room.status ||
+      "available"
 
   };
 
 }
+
+
+// ============================================================
+// GENERATION SCOPE
+// ============================================================
+
+function getGenerationScope() {
+
+  const selected =
+    document.querySelector(
+      'input[name="generationScope"]:checked'
+    );
+
+
+  return selected
+    ? selected.value
+    : "single";
+
+}
+
+
+// ============================================================
+// UPDATE SCOPE UI
+// ============================================================
+
+function updateGenerationScopeUI() {
+
+  const scope =
+    getGenerationScope();
+
+
+  const academicDetailsBox =
+    document.querySelector(
+      "#academicDetailsBox"
+    );
+
+
+  const yearSelect =
+    document.querySelector(
+      "#academicYear"
+    );
+
+
+  const semesterSelect =
+    document.querySelector(
+      "#semester"
+    );
+
+
+  if (
+    scope === "single"
+  ) {
+
+    academicDetailsBox.style.display =
+      "block";
+
+
+    yearSelect.disabled =
+      false;
+
+
+    semesterSelect.disabled =
+      false;
+
+
+    return;
+
+  }
+
+
+  academicDetailsBox.style.display =
+    "none";
+
+
+  yearSelect.disabled =
+    true;
+
+
+  semesterSelect.disabled =
+    true;
+
+}
+
+
+// ============================================================
+// GET TARGET SEMESTERS
+// ============================================================
+
+function getTargetSemesters() {
+
+  const scope =
+    getGenerationScope();
+
+
+  if (
+    scope === "single"
+  ) {
+
+    const year =
+      document.querySelector(
+        "#academicYear"
+      ).value;
+
+
+    const semester =
+      Number(
+        document.querySelector(
+          "#semester"
+        ).value
+      );
+
+
+    if (
+      !year ||
+      !semester
+    ) {
+
+      return [];
+
+    }
+
+
+    return [
+
+      {
+
+        year,
+
+        semester,
+
+        key:
+          `${year}-${semester}`
+
+      }
+
+    ];
+
+  }
+
+
+  if (
+    scope === "odd"
+  ) {
+
+    return [
+
+      {
+        year: "SE",
+        semester: 3,
+        key: "SE-3"
+      },
+
+      {
+        year: "TE",
+        semester: 5,
+        key: "TE-5"
+      },
+
+      {
+        year: "BE",
+        semester: 7,
+        key: "BE-7"
+      }
+
+    ];
+
+  }
+
+
+  return [
+
+    {
+      year: "SE",
+      semester: 4,
+      key: "SE-4"
+    },
+
+    {
+      year: "TE",
+      semester: 6,
+      key: "TE-6"
+    },
+
+    {
+      year: "BE",
+      semester: 8,
+      key: "BE-8"
+    }
+
+  ];
+
+}
+
 
 // ============================================================
 // WORKING DAYS
@@ -414,183 +866,356 @@ function updateWorkingDays() {
         ".working-day:checked"
       )
     )
-    .map(box => box.value);
+      .map(
+        checkbox =>
+          checkbox.value
+      );
 
 }
 
+
 // ============================================================
-// ELECTIVE UI
+// GET SEMESTER SUBJECTS
+// ============================================================
+
+function getSemesterSubjects(
+  year,
+  semester
+) {
+
+  return allSubjects.filter(
+    subject => {
+
+      const subjectYear =
+        String(
+          subject.year ||
+          ""
+        )
+          .trim()
+          .toUpperCase();
+
+
+      return (
+
+        subject.active !== false &&
+
+        subjectYear ===
+          String(
+            year
+          )
+            .trim()
+            .toUpperCase() &&
+
+        Number(
+          subject.semester
+        ) ===
+          Number(
+            semester
+          )
+
+      );
+
+    }
+  );
+
+}
+
+
+// ============================================================
+// ELECTIVE GROUP
+// ============================================================
+
+function getElectiveGroup(
+  subject
+) {
+
+  if (
+    subject.electiveGroup
+  ) {
+
+    return String(
+      subject.electiveGroup
+    ).trim();
+
+  }
+
+
+  return "";
+
+}
+
+
+// ============================================================
+// UPDATE ELECTIVE UI
 // ============================================================
 
 function updateElectiveUI() {
-
-  const year =
-    document.querySelector(
-      "#academicYear"
-    )?.value || "";
-
-  const semester =
-    Number(
-      document.querySelector(
-        "#semester"
-      )?.value || 0
-    );
 
   const section =
     document.querySelector(
       "#electiveSection"
     );
 
-  const list =
+
+  const container =
     document.querySelector(
       "#electiveList"
     );
 
-  if (!section || !list) {
+
+  if (
+    !section ||
+    !container
+  ) {
+
     return;
+
   }
+
 
   electiveGroups = {};
 
-  const semesterSubjects =
-    allSubjects.filter(subject => {
 
-      return (
-        String(subject.year) ===
-          String(year) &&
+  container.innerHTML =
+    "";
 
-        Number(subject.semester) ===
-          Number(semester) &&
 
-        subject.active !== false
-      );
+  const semesters =
+    getTargetSemesters();
 
-    });
 
-  semesterSubjects.forEach(subject => {
+  if (
+    semesters.length === 0
+  ) {
 
-    const group =
-      String(
-        subject.electiveGroup || ""
-      ).trim();
-
-    if (!group) {
-      return;
-    }
-
-    if (!electiveGroups[group]) {
-      electiveGroups[group] = [];
-    }
-
-    electiveGroups[group].push(
-      subject
-    );
-
-  });
-
-  const groups =
-    Object.keys(
-      electiveGroups
-    );
-
-  if (!groups.length) {
-
-    section.style.display = "none";
-    list.innerHTML = "";
+    section.style.display =
+      "none";
 
     return;
 
   }
 
-  section.style.display = "block";
 
-  list.innerHTML =
-    groups.map(group => {
+  semesters.forEach(
+    semesterInfo => {
 
-      const options =
-        electiveGroups[group];
+      const subjects =
+        getSemesterSubjects(
+          semesterInfo.year,
+          semesterInfo.semester
+        );
 
-      return `
 
-        <div
-          style="
-            padding:16px;
-            border:1px solid #e5e7eb;
-            border-radius:10px;
-            margin-bottom:12px;
-          "
-        >
+      subjects.forEach(
+        subject => {
 
-          <strong>
-            ${escapeHtml(group)}
-          </strong>
+          const group =
+            getElectiveGroup(
+              subject
+            );
 
-          <div
-            style="
-              margin-top:12px;
-              display:grid;
-              gap:8px;
-            "
-          >
 
-            ${options.map(
-              (subject, index) => `
+          if (!group) {
 
-                <label
-                  style="
-                    display:flex;
-                    gap:10px;
-                    align-items:flex-start;
-                    cursor:pointer;
-                  "
-                >
+            return;
 
-                  <input
-                    type="radio"
-                    name="elective_${escapeAttribute(group)}"
-                    value="${escapeAttribute(subject.id)}"
-                    class="elective-option"
-                    ${index === 0 ? "checked" : ""}
-                  >
+          }
 
-                  <span>
 
-                    <strong>
-                      ${escapeHtml(
-                        subject.name || ""
-                      )}
-                    </strong>
+          const key =
+            `${semesterInfo.key}::${group}`;
 
-                    <br>
 
-                    <small>
-                      L${num(
-                        subject.lectureHours
-                      )}
-                      T${num(
-                        subject.tutorialHours
-                      )}
-                      P${num(
-                        subject.practicalHours
-                      )}
-                    </small>
+          if (
+            !electiveGroups[key]
+          ) {
 
-                  </span>
+            electiveGroups[key] = {
 
-                </label>
+              year:
+                semesterInfo.year,
 
-              `
-            ).join("")}
+              semester:
+                semesterInfo.semester,
 
-          </div>
+              semesterKey:
+                semesterInfo.key,
 
-        </div>
+              group,
 
-      `;
+              subjects: []
 
-    }).join("");
+            };
+
+          }
+
+
+          electiveGroups[key]
+            .subjects
+            .push(
+              subject
+            );
+
+        }
+      );
+
+    }
+  );
+
+
+  const groups =
+    Object.values(
+      electiveGroups
+    );
+
+
+  if (
+    groups.length === 0
+  ) {
+
+    section.style.display =
+      "none";
+
+    return;
+
+  }
+
+
+  section.style.display =
+    "block";
+
+
+  container.innerHTML =
+    groups
+      .map(
+        groupInfo => {
+
+          return `
+
+            <div
+              style="
+                padding:16px;
+                border:1px solid #e5e7eb;
+                border-radius:10px;
+                margin-bottom:12px;
+              "
+            >
+
+              <strong>
+                ${escapeHtml(
+                  groupInfo.semesterKey
+                )}
+                —
+                ${escapeHtml(
+                  groupInfo.group
+                )}
+              </strong>
+
+
+              <div
+                style="
+                  margin-top:12px;
+                  display:grid;
+                  gap:8px;
+                "
+              >
+
+                ${groupInfo.subjects
+                  .map(
+                    (
+                      subject,
+                      index
+                    ) => {
+
+                      return `
+
+                        <label
+                          style="
+                            display:flex;
+                            gap:10px;
+                            align-items:flex-start;
+                            cursor:pointer;
+                          "
+                        >
+
+                          <input
+                            type="radio"
+                            name="${escapeAttribute(
+                              "elective_" +
+                              groupInfo.semesterKey +
+                              "_" +
+                              groupInfo.group
+                            )}"
+                            value="${escapeAttribute(
+                              subject.id
+                            )}"
+                            class="elective-option"
+                            data-group="${escapeAttribute(
+                              groupInfo.group
+                            )}"
+                            data-semester-key="${escapeAttribute(
+                              groupInfo.semesterKey
+                            )}"
+                            ${
+                              index === 0
+                                ? "checked"
+                                : ""
+                            }
+                          >
+
+
+                          <span>
+
+                            <strong>
+                              ${escapeHtml(
+                                subject.name ||
+                                subject.subjectName ||
+                                subject.id
+                              )}
+                            </strong>
+
+
+                            <br>
+
+
+                            <small>
+
+                              L${getLectureHours(
+                                subject
+                              )}
+
+                              T${getTutorialHours(
+                                subject
+                              )}
+
+                              P${getPracticalHours(
+                                subject
+                              )}
+
+                            </small>
+
+                          </span>
+
+                        </label>
+
+                      `;
+
+                    }
+                  )
+                  .join("")}
+
+              </div>
+
+            </div>
+
+          `;
+
+        }
+      )
+      .join("");
 
 }
+
 
 // ============================================================
 // SELECTED ELECTIVES
@@ -598,133 +1223,197 @@ function updateElectiveUI() {
 
 function getSelectedElectiveIds() {
 
-  return new Set(
+  const selected =
+    new Set();
 
-    Array.from(
-      document.querySelectorAll(
-        "#electiveList input[type='radio']:checked"
-      )
-    )
-    .map(input =>
-      input.value
-    )
 
+  document
+    .querySelectorAll(
+      '#electiveList input[type="radio"]:checked'
+    )
+    .forEach(
+      radio => {
+
+        selected.add(
+          radio.value
+        );
+
+      }
+    );
+
+
+  return selected;
+
+}
+
+
+// ============================================================
+// IS SUBJECT SCHEDULED?
+// ============================================================
+
+function isSubjectSelected(
+  subject,
+  selectedElectives
+) {
+
+  const group =
+    getElectiveGroup(
+      subject
+    );
+
+
+  if (!group) {
+
+    return true;
+
+  }
+
+
+  return selectedElectives.has(
+    subject.id
   );
 
 }
 
+
 // ============================================================
-// SCHEDULABLE SUBJECTS
+// GET SELECTED SUBJECTS
 // ============================================================
 
-function getSchedulableSubjects() {
+function getSelectedSubjects(
+  semesterInfo
+) {
 
-  const year =
-    document.querySelector(
-      "#academicYear"
-    )?.value || "";
-
-  const semester =
-    Number(
-      document.querySelector(
-        "#semester"
-      )?.value || 0
+  const subjects =
+    getSemesterSubjects(
+      semesterInfo.year,
+      semesterInfo.semester
     );
+
 
   const selectedElectives =
     getSelectedElectiveIds();
 
-  return allSubjects.filter(
-    subject => {
 
-      if (
-        String(subject.year) !==
-        String(year)
-      ) {
-        return false;
-      }
-
-      if (
-        Number(subject.semester) !==
-        Number(semester)
-      ) {
-        return false;
-      }
-
-      if (
-        subject.active === false
-      ) {
-        return false;
-      }
-
-      if (
-        subject.electiveGroup
-      ) {
-
-        return selectedElectives.has(
-          subject.id
-        );
-
-      }
-
-      return true;
-
-    }
+  return subjects.filter(
+    subject =>
+      isSubjectSelected(
+        subject,
+        selectedElectives
+      )
   );
 
 }
 
+
 // ============================================================
-// LOAD CALCULATION
+// GET L/T/P
 // ============================================================
 
-function calculateLoad(subjects) {
+function getLectureHours(
+  subject
+) {
 
-  const L =
-    subjects.reduce(
-      (sum, subject) =>
-        sum +
-        num(
-          subject.lectureHours
-        ),
-      0
-    );
+  return numberValue(
+    subject.lectureHours ??
+    subject.lecture ??
+    subject.L ??
+    subject.l ??
+    0
+  );
 
-  const T =
-    subjects.reduce(
-      (sum, subject) =>
-        sum +
-        num(
-          subject.tutorialHours
-        ),
-      0
-    );
+}
 
-  const P =
-    subjects.reduce(
-      (sum, subject) =>
-        sum +
-        num(
-          subject.practicalHours
-        ),
-      0
-    );
+
+function getTutorialHours(
+  subject
+) {
+
+  return numberValue(
+    subject.tutorialHours ??
+    subject.tutorial ??
+    subject.T ??
+    subject.t ??
+    0
+  );
+
+}
+
+
+function getPracticalHours(
+  subject
+) {
+
+  return numberValue(
+    subject.practicalHours ??
+    subject.practical ??
+    subject.P ??
+    subject.p ??
+    0
+  );
+
+}
+
+
+// ============================================================
+// CALCULATE LOAD
+// ============================================================
+
+function calculateLoad(
+  subjects
+) {
+
+  let L = 0;
+
+  let T = 0;
+
+  let P = 0;
+
+
+  subjects.forEach(
+    subject => {
+
+      L +=
+        getLectureHours(
+          subject
+        );
+
+
+      T +=
+        getTutorialHours(
+          subject
+        );
+
+
+      P +=
+        getPracticalHours(
+          subject
+        );
+
+    }
+  );
+
 
   return {
 
     L,
+
     T,
+
     P,
 
     total:
-      L + T + P
+      L +
+      T +
+      P
 
   };
 
 }
 
+
 // ============================================================
-// REQUIREMENT SUMMARY
+// UPDATE REQUIREMENT SUMMARY
 // ============================================================
 
 function updateRequirementSummary() {
@@ -734,790 +1423,911 @@ function updateRequirementSummary() {
       "#requirementSummary"
     );
 
-  const subjects =
-    getSchedulableSubjects();
 
-  const load =
-    calculateLoad(subjects);
+  const semesters =
+    getTargetSemesters();
 
-  setText(
-    "#requiredLectures",
-    load.L
-  );
 
-  setText(
-    "#requiredTutorials",
-    load.T
-  );
-
-  setText(
-    "#requiredPracticals",
-    load.P
-  );
-
-  setText(
-    "#requiredTotal",
-    load.total
-  );
-
-  if (summary) {
+  if (
+    semesters.length === 0
+  ) {
 
     summary.style.display =
-      subjects.length
-        ? "block"
-        : "none";
+      "none";
+
+    return;
 
   }
 
-}
 
-// ============================================================
-// MAIN GENERATOR
-// ============================================================
+  summary.style.display =
+    "block";
 
-async function generateTimetable() {
 
-  const button =
-    document.querySelector(
-      "#generateButton"
-    );
+  /*
+   * For single semester the original four
+   * summary fields are used.
+   *
+   * For multi-semester mode we show totals.
+   */
 
-  clearMessage();
+  let totalL = 0;
 
-  const year =
-    document.querySelector(
-      "#academicYear"
-    )?.value || "";
+  let totalT = 0;
 
-  const semester =
-    Number(
-      document.querySelector(
-        "#semester"
-      )?.value || 0
-    );
+  let totalP = 0;
 
-  try {
 
-    updateWorkingDays();
+  semesters.forEach(
+    semesterInfo => {
 
-    // --------------------------------------------------------
-    // VALIDATION
-    // --------------------------------------------------------
-
-    if (!year) {
-
-      throw new Error(
-        "Please select an Academic Year."
-      );
-
-    }
-
-    if (!semester) {
-
-      throw new Error(
-        "Please select a Semester."
-      );
-
-    }
-
-    if (
-      selectedWorkingDays.length === 0
-    ) {
-
-      throw new Error(
-        "Please select at least one Working Day."
-      );
-
-    }
-
-    const subjects =
-      getSchedulableSubjects();
-
-    if (!subjects.length) {
-
-      throw new Error(
-        `No subjects found for ${year}, Semester ${semester}.`
-      );
-
-    }
-
-    // Check elective selections.
-    for (
-      const group of Object.keys(
-        electiveGroups
-      )
-    ) {
-
-      const safeName =
-        escapeCss(group);
-
-      const selected =
-        document.querySelector(
-          `input[name="elective_${safeName}"]:checked`
+      const subjects =
+        getSelectedSubjects(
+          semesterInfo
         );
 
-      if (!selected) {
 
-        throw new Error(
-          `Please select one subject from ${group}.`
+      const load =
+        calculateLoad(
+          subjects
+        );
+
+
+      totalL += load.L;
+
+      totalT += load.T;
+
+      totalP += load.P;
+
+    }
+  );
+
+
+  setText(
+    "#requiredLectures",
+    totalL
+  );
+
+
+  setText(
+    "#requiredTutorials",
+    totalT
+  );
+
+
+  setText(
+    "#requiredPracticals",
+    totalP
+  );
+
+
+  setText(
+    "#requiredTotal",
+    totalL +
+    totalT +
+    totalP
+  );
+
+
+  updateTeacherRequirementSummary(
+    semesters
+  );
+
+}
+
+
+// ============================================================
+// TEACHER REQUIREMENT SUMMARY
+// ============================================================
+//
+// Uses the actual faculty uploaded into Firestore.
+//
+// Minimum teachers are calculated from:
+//     required weekly periods
+//     +
+//     faculty workloadLimit
+//
+// Faculty are taken from facultyAssignments for
+// the selected year + semester.
+// ============================================================
+
+function updateTeacherRequirementSummary(
+  semesters
+) {
+
+  const container =
+    document.querySelector(
+      "#teacherRequirementSummary"
+    );
+
+
+  if (!container) {
+    return;
+  }
+
+
+  container.innerHTML = "";
+
+
+  semesters.forEach(
+    semesterInfo => {
+
+      const subjects =
+        getSelectedSubjects(
+          semesterInfo
+        );
+
+
+      const load =
+        calculateLoad(
+          subjects
+        );
+
+
+      const teacherInfo =
+        getTeacherRequirement(
+          semesterInfo,
+          subjects
+        );
+
+
+      const teacherList =
+        teacherInfo.assignedTeachers
+          .map(
+            teacher => {
+
+              const limit =
+                getFacultyWorkloadLimit(
+                  teacher
+                );
+
+
+              return `
+
+                <li>
+
+                  ${escapeHtml(
+                    teacher.name ||
+                    teacher.employeeId ||
+                    teacher.id
+                  )}
+
+                  <small>
+                    —
+                    ${limit}
+                    periods/week
+                  </small>
+
+                </li>
+
+              `;
+
+            }
+          )
+          .join("");
+
+
+      let messageHtml = "";
+
+
+      if (
+        teacherInfo.assignedCount === 0
+      ) {
+
+        messageHtml = `
+
+          <div class="teacher-warning">
+
+            ⚠ No teachers are assigned to
+            ${escapeHtml(
+              semesterInfo.key
+            )} through Subject Assignment.
+
+          </div>
+
+        `;
+
+      } else if (
+        teacherInfo.totalAssignedCapacity <
+        load.total
+      ) {
+
+        messageHtml = `
+
+          <div class="teacher-warning">
+
+            ⚠ Assigned faculty capacity is
+            ${teacherInfo.totalAssignedCapacity}
+            periods/week, but this semester
+            requires ${load.total}
+            periods/week.
+
+          </div>
+
+        `;
+
+      } else {
+
+        messageHtml = `
+
+          <div class="teacher-success">
+
+            ✓ Assigned faculty capacity is sufficient
+            for the weekly requirement.
+
+          </div>
+
+        `;
+
+      }
+
+
+      const card =
+        document.createElement(
+          "div"
+        );
+
+
+      card.className =
+        "teacher-semester-card";
+
+
+      card.innerHTML = `
+
+        <div class="teacher-semester-title">
+
+          ${escapeHtml(
+            semesterInfo.key
+          )}
+
+        </div>
+
+
+        <div class="teacher-stats">
+
+
+          <div class="teacher-stat">
+
+            <small>
+              Weekly Periods
+            </small>
+
+            <strong>
+              ${load.total}
+            </strong>
+
+          </div>
+
+
+          <div class="teacher-stat">
+
+            <small>
+              Teachers Assigned
+            </small>
+
+            <strong>
+              ${teacherInfo.assignedCount}
+            </strong>
+
+          </div>
+
+
+          <div class="teacher-stat">
+
+            <small>
+              Minimum Teachers Required
+            </small>
+
+            <strong>
+              ${teacherInfo.minimumRequired}
+            </strong>
+
+          </div>
+
+
+          <div class="teacher-stat">
+
+            <small>
+              Assigned Capacity
+            </small>
+
+            <strong>
+              ${teacherInfo.totalAssignedCapacity}
+            </strong>
+
+          </div>
+
+
+        </div>
+
+
+        <div class="teacher-list">
+
+          <div class="teacher-list-title">
+
+            Teachers assigned from Faculty Assignment:
+
+          </div>
+
+
+          ${
+            teacherList
+              ? `
+                <ul>
+                  ${teacherList}
+                </ul>
+              `
+              : `
+                <div class="teacher-neutral">
+                  No assigned teachers found.
+                </div>
+              `
+          }
+
+
+        </div>
+
+
+        ${messageHtml}
+
+      `;
+
+
+      container.appendChild(
+        card
+      );
+
+    }
+  );
+
+}
+
+
+// ============================================================
+// TEACHER REQUIREMENT
+// ============================================================
+
+function getTeacherRequirement(
+  semesterInfo,
+  subjects
+) {
+
+  const facultyIds =
+    new Set();
+
+
+  const subjectIds =
+    new Set(
+      subjects.map(
+        subject =>
+          subject.id
+      )
+    );
+
+
+  /*
+   * Read facultyAssignments.
+   *
+   * Preferred structure:
+   *
+   * assignments: [
+   *   {
+   *      subjectId,
+   *      year,
+   *      semester
+   *   }
+   * ]
+   */
+
+  allFacultyAssignments.forEach(
+    assignmentDoc => {
+
+      if (
+        !assignmentDoc.facultyId
+      ) {
+
+        return;
+
+      }
+
+
+      const nestedAssignments =
+        Array.isArray(
+          assignmentDoc.assignments
+        )
+          ? assignmentDoc.assignments
+          : [];
+
+
+      nestedAssignments.forEach(
+        assignment => {
+
+          const year =
+            normalizeYear(
+              assignment.year
+            );
+
+
+          const semester =
+            Number(
+              assignment.semester
+            );
+
+
+          if (
+
+            year ===
+              normalizeYear(
+                semesterInfo.year
+              )
+
+            &&
+
+            semester ===
+              Number(
+                semesterInfo.semester
+              )
+
+            &&
+
+            subjectIds.has(
+              assignment.subjectId
+            )
+
+          ) {
+
+            facultyIds.add(
+              assignmentDoc.facultyId
+            );
+
+          }
+
+        }
+      );
+
+
+      /*
+       * Backward-compatible subjectIds support.
+       *
+       * If a faculty document has subjectIds but
+       * no semester information, it is considered
+       * assigned to the subject.
+       */
+
+      const subjectIdsArray =
+        Array.isArray(
+          assignmentDoc.subjectIds
+        )
+          ? assignmentDoc.subjectIds
+          : [];
+
+
+      if (
+        nestedAssignments.length === 0
+      ) {
+
+        subjectIdsArray.forEach(
+          subjectId => {
+
+            if (
+              subjectIds.has(
+                subjectId
+              )
+            ) {
+
+              facultyIds.add(
+                assignmentDoc.facultyId
+              );
+
+            }
+
+          }
         );
 
       }
 
     }
+  );
 
-    const load =
-      calculateLoad(subjects);
 
-    const availablePeriods =
-      selectedWorkingDays.length *
-      PERIODS.length;
+  const assignedTeachers =
+    Array.from(
+      facultyIds
+    )
+      .map(
+        facultyId =>
+          allFaculty.find(
+            faculty =>
+              faculty.id ===
+              facultyId
+          )
+      )
+      .filter(
+        Boolean
+      );
+
+
+  /*
+   * Sort highest workload first.
+   */
+
+  const sortedTeachers =
+    [
+      ...assignedTeachers
+    ]
+      .sort(
+        (a, b) =>
+          getFacultyWorkloadLimit(b) -
+          getFacultyWorkloadLimit(a)
+      );
+
+
+  /*
+   * Minimum number of assigned teachers
+   * needed to cover the weekly load.
+   *
+   * Example:
+   *
+   * Required = 26
+   *
+   * Teacher A = 18
+   * Teacher B = 18
+   *
+   * 18 + 18 >= 26
+   *
+   * Minimum = 2
+   */
+
+  let capacity = 0;
+
+  let minimumRequired = 0;
+
+
+  const weeklyLoad =
+    calculateLoad(
+      subjects
+    ).total;
+
+
+  for (
+    const teacher
+    of sortedTeachers
+  ) {
+
+    capacity +=
+      getFacultyWorkloadLimit(
+        teacher
+      );
+
+
+    minimumRequired++;
+
 
     if (
-      load.total >
-      availablePeriods
+      capacity >=
+      weeklyLoad
     ) {
 
-      throw new Error(
-        `Required ${load.total} periods but only ${availablePeriods} periods are available.`
-      );
+      break;
 
     }
 
-    if (!allFaculty.length) {
+  }
 
-      throw new Error(
-        "No active faculty found."
-      );
 
-    }
+  /*
+   * If assigned teachers do not cover the load,
+   * calculate the theoretical minimum from all
+   * uploaded faculty workload limits.
+   */
 
-    if (!allRooms.length) {
+  if (
+    capacity <
+    weeklyLoad
+  ) {
 
-      throw new Error(
-        "No available classrooms or laboratories found."
-      );
-
-    }
-
-    // --------------------------------------------------------
-    // SUBJECT-FACULTY ASSIGNMENT CHECK
-    // --------------------------------------------------------
-
-    validateSubjectAssignments(
-      subjects,
-      year,
-      semester
-    );
-
-    // --------------------------------------------------------
-    // CREATE TASKS
-    // --------------------------------------------------------
-
-    const tasks =
-      createTasks(subjects);
-
-    if (!tasks.length) {
-
-      throw new Error(
-        "No timetable tasks could be created."
-      );
-
-    }
-
-    console.log(
-      "Generation Tasks:",
-      tasks
-    );
-
-    setButtonGenerating(
-      button
-    );
-
-    showStatus(
-      `Generating ${year}, Semester ${semester}...`,
-      "info"
-    );
-
-    // --------------------------------------------------------
-    // EXISTING TIMETABLE OCCUPANCY
-    // --------------------------------------------------------
-
-    const external =
-      buildExternalOccupancy(
-        year,
-        semester
-      );
-
-    // --------------------------------------------------------
-    // TRY MANY TIMES
-    // --------------------------------------------------------
-
-    let result = null;
-    let lastMessage = "";
-
-    for (
-      let attempt = 1;
-      attempt <= MAX_ATTEMPTS;
-      attempt++
-    ) {
-
-      showStatus(
-        `Generating timetable... Attempt ${attempt}/${MAX_ATTEMPTS}`,
-        "info"
-      );
-
-      result =
-        createSchedule(
-          tasks,
-          selectedWorkingDays,
-          allFaculty,
-          allRooms,
-          year,
-          semester,
-          external
+    const allCapacities =
+      allFaculty
+        .map(
+          faculty =>
+            getFacultyWorkloadLimit(
+              faculty
+            )
+        )
+        .sort(
+          (a, b) =>
+            b - a
         );
 
-      if (
-        result.success
-      ) {
 
-        result.attempt =
-          attempt;
+    let theoreticalCapacity = 0;
+
+    let theoreticalMinimum = 0;
+
+
+    for (
+      const value
+      of allCapacities
+    ) {
+
+      theoreticalCapacity +=
+        value;
+
+      theoreticalMinimum++;
+
+
+      if (
+        theoreticalCapacity >=
+        weeklyLoad
+      ) {
 
         break;
 
       }
 
-      lastMessage =
-        result.message ||
-        "Unable to create schedule.";
-
     }
 
-    if (
-      !result ||
-      !result.success
-    ) {
 
-      throw new Error(
-        lastMessage ||
-        "Unable to generate a conflict-free timetable."
+    minimumRequired =
+      Math.max(
+        minimumRequired,
+        theoreticalMinimum
       );
-
-    }
-
-    // --------------------------------------------------------
-    // SAVE
-    // --------------------------------------------------------
-
-    showStatus(
-      "Timetable generated. Saving to Firebase...",
-      "info"
-    );
-
-    const timetableId =
-      `${year}_${semester}`;
-
-    const timetableData = {
-
-      year,
-
-      semester,
-
-      workingDays:
-        [...selectedWorkingDays],
-
-      periods:
-        PERIODS,
-
-      load,
-
-      entries:
-        result.entries,
-
-      generatedAt:
-        serverTimestamp(),
-
-      generationInfo: {
-
-        attempts:
-          result.attempt,
-
-        subjectCount:
-          subjects.length,
-
-        entryCount:
-          result.entries.length,
-
-        coordinated:
-          true
-
-      }
-
-    };
-
-    await setDoc(
-      doc(
-        db,
-        "timetables",
-        timetableId
-      ),
-      timetableData
-    );
-
-    // Update local copy.
-    existingTimetables =
-      existingTimetables.filter(
-        timetable =>
-          !(
-            String(timetable.year) ===
-              String(year) &&
-
-            Number(timetable.semester) ===
-              Number(semester)
-          )
-      );
-
-    existingTimetables.push({
-
-      id:
-        timetableId,
-
-      ...timetableData
-
-    });
-
-    // --------------------------------------------------------
-    // SUCCESS
-    // --------------------------------------------------------
-
-    showStatus(
-      `Timetable generated successfully. ${result.entries.length} period entries created.`,
-      "success"
-    );
-
-    showMessage(
-      `Timetable generated successfully for ${year}, Semester ${semester}.`,
-      "success"
-    );
-
-    renderGenerationResult(
-      result.entries,
-      load
-    );
-
-  } catch (error) {
-
-    console.error(
-      "TIMETABLE GENERATION ERROR:",
-      error
-    );
-
-    showStatus(
-      "Timetable generation failed.",
-      "error"
-    );
-
-    showMessage(
-      error.message ||
-      "Unable to generate timetable.",
-      "error"
-    );
-
-  } finally {
-
-    if (button) {
-
-      button.disabled = false;
-      button.textContent =
-        "Generate Timetable";
-
-    }
 
   }
 
-}
 
-// ============================================================
-// CREATE TASKS
-// ============================================================
-
-function createTasks(subjects) {
-
-  const tasks = [];
-
-  subjects.forEach(
-    subject => {
-
-      const type =
-        normalizeSubjectType(
-          subject
-        );
-
-      // ------------------------------------------------------
-      // LECTURES
-      // ------------------------------------------------------
-
-      const lectureHours =
-        num(
-          subject.lectureHours
-        );
-
-      for (
-        let i = 0;
-        i < lectureHours;
-        i++
-      ) {
-
-        tasks.push({
-
-          id:
-            `${subject.id}-L-${i}`,
-
-          subjectId:
-            subject.id,
-
-          subjectName:
-            subject.name,
-
-          year:
-            subject.year,
-
-          semester:
-            Number(
-              subject.semester
-            ),
-
-          type:
-            "lecture",
-
-          duration:
-            1,
-
-          priority:
-            5
-
-        });
-
-      }
-
-      // ------------------------------------------------------
-      // TUTORIALS
-      // ------------------------------------------------------
-
-      const tutorialHours =
-        num(
-          subject.tutorialHours
-        );
-
-      for (
-        let i = 0;
-        i < tutorialHours;
-        i++
-      ) {
-
-        tasks.push({
-
-          id:
-            `${subject.id}-T-${i}`,
-
-          subjectId:
-            subject.id,
-
-          subjectName:
-            subject.name,
-
-          year:
-            subject.year,
-
-          semester:
-            Number(
-              subject.semester
-            ),
-
-          type:
-            "tutorial",
-
-          duration:
-            1,
-
-          priority:
-            4
-
-        });
-
-      }
-
-      // ------------------------------------------------------
-      // PRACTICALS
-      // ------------------------------------------------------
-
-      let practicalHours =
-        num(
-          subject.practicalHours
-        );
-
-      let block =
-        1;
-
-      while (
-        practicalHours >= 2
-      ) {
-
-        let taskType =
-          "lab";
-
-        if (
-          type === "seminar"
-        ) {
-          taskType =
-            "seminar";
-        }
-
-        if (
-          type === "project"
-        ) {
-          taskType =
-            "project";
-        }
-
-        tasks.push({
-
-          id:
-            `${subject.id}-P-${block}`,
-
-          subjectId:
-            subject.id,
-
-          subjectName:
-            subject.name,
-
-          year:
-            subject.year,
-
-          semester:
-            Number(
-              subject.semester
-            ),
-
-          type:
-            taskType,
-
-          duration:
-            2,
-
-          priority:
-            taskType === "lab"
-              ? 1
-              : 2
-
-        });
-
-        block++;
-
-        practicalHours -= 2;
-
-      }
-
-      // ------------------------------------------------------
-      // ODD PRACTICAL HOUR
-      // ------------------------------------------------------
-
-      if (
-        practicalHours === 1
-      ) {
-
-        let taskType =
-          "lab";
-
-        if (
-          type === "seminar"
-        ) {
-          taskType =
-            "seminar";
-        }
-
-        if (
-          type === "project"
-        ) {
-          taskType =
-            "project";
-        }
-
-        tasks.push({
-
-          id:
-            `${subject.id}-P-${block}`,
-
-          subjectId:
-            subject.id,
-
-          subjectName:
-            subject.name,
-
-          year:
-            subject.year,
-
-          semester:
-            Number(
-              subject.semester
-            ),
-
-          type:
-            taskType,
-
-          duration:
-            1,
-
-          priority:
-            2
-
-        });
-
-      }
-
-    }
-  );
-
-  // Longer tasks first.
-  return shuffle(tasks).sort(
-    (a, b) => {
-
-      if (
-        a.duration !==
-        b.duration
-      ) {
-
-        return (
-          b.duration -
-          a.duration
-        );
-
-      }
-
-      return (
-        a.priority -
-        b.priority
-      );
-
-    }
-  );
+  return {
+
+    assignedTeachers:
+      sortedTeachers,
+
+    assignedCount:
+      sortedTeachers.length,
+
+    minimumRequired,
+
+    totalAssignedCapacity:
+      sortedTeachers.reduce(
+        (
+          total,
+          teacher
+        ) =>
+          total +
+          getFacultyWorkloadLimit(
+            teacher
+          ),
+        0
+      )
+
+  };
 
 }
 
+
 // ============================================================
-// SUBJECT TYPE
+// FACULTY WORKLOAD LIMIT
 // ============================================================
 
-function normalizeSubjectType(
-  subject
+function getFacultyWorkloadLimit(
+  faculty
 ) {
 
-  const explicitType =
-    String(
-      subject.type || ""
-    )
-    .trim()
-    .toLowerCase();
+  const value =
+    Number(
+      faculty.workloadLimit
+    );
+
 
   if (
-    explicitType ===
-    "seminar"
+    Number.isFinite(value) &&
+    value > 0
   ) {
-    return "seminar";
+
+    return value;
+
   }
 
-  if (
-    explicitType ===
-    "project"
-  ) {
-    return "project";
-  }
 
-  if (
-    explicitType ===
-    "lab"
-  ) {
-    return "lab";
-  }
+  /*
+   * Existing faculty records should normally
+   * contain workloadLimit.
+   *
+   * 18 is only a safe fallback if missing.
+   */
 
-  const name =
-    String(
-      subject.name || ""
-    ).toLowerCase();
-
-  if (
-    name.includes(
-      "seminar"
-    )
-  ) {
-    return "seminar";
-  }
-
-  if (
-    name.includes(
-      "mini project"
-    ) ||
-    name.includes(
-      "project work"
-    )
-  ) {
-    return "project";
-  }
-
-  return "theory";
+  return 18;
 
 }
 
+
 // ============================================================
-// ASSIGNMENT VALIDATION
+// VALIDATE ELECTIVE SELECTIONS
+// ============================================================
+
+function validateElectiveSelections(
+  semesters
+) {
+
+  const selected =
+    getSelectedElectiveIds();
+
+
+  for (
+    const semesterInfo
+    of semesters
+  ) {
+
+    const subjects =
+      getSemesterSubjects(
+        semesterInfo.year,
+        semesterInfo.semester
+      );
+
+
+    const groups =
+      new Map();
+
+
+    subjects.forEach(
+      subject => {
+
+        const group =
+          getElectiveGroup(
+            subject
+          );
+
+
+        if (!group) {
+          return;
+        }
+
+
+        if (
+          !groups.has(group)
+        ) {
+
+          groups.set(
+            group,
+            []
+          );
+
+        }
+
+
+        groups
+          .get(group)
+          .push(
+            subject
+          );
+
+      }
+    );
+
+
+    for (
+      const [
+        group,
+        groupSubjects
+      ]
+      of groups
+    ) {
+
+      if (
+        groupSubjects.length <= 1
+      ) {
+
+        continue;
+
+      }
+
+
+      const selectedFromGroup =
+        groupSubjects.some(
+          subject =>
+            selected.has(
+              subject.id
+            )
+        );
+
+
+      if (
+        !selectedFromGroup
+      ) {
+
+        throw new Error(
+
+          `Please select one option from ` +
+          `${semesterInfo.key} — ${group}.`
+
+        );
+
+      }
+
+    }
+
+  }
+
+}
+
+
+// ============================================================
+// VALIDATE ASSIGNMENTS
 // ============================================================
 
 function validateSubjectAssignments(
-  subjects,
-  year,
-  semester
+  semesters
 ) {
 
   const missing = [];
 
-  subjects.forEach(
-    subject => {
 
-      const assigned =
-        getAssignedFaculty(
-          subject.id,
-          year,
-          semester
+  semesters.forEach(
+    semesterInfo => {
+
+      const subjects =
+        getSelectedSubjects(
+          semesterInfo
         );
 
-      if (
-        assigned.length === 0
-      ) {
 
-        missing.push(
-          subject.name
-        );
+      subjects.forEach(
+        subject => {
 
-      }
+          const assigned =
+            getAssignedFaculty(
+              subject.id,
+              semesterInfo.year,
+              semesterInfo.semester
+            );
+
+
+          if (
+            assigned.length === 0
+          ) {
+
+            missing.push(
+
+              `${semesterInfo.key}: ` +
+              `${subject.name || subject.id}`
+
+            );
+
+          }
+
+        }
+      );
 
     }
   );
+
 
   if (
     missing.length
   ) {
 
     throw new Error(
-      "No faculty assigned for: " +
-      missing.join(", ") +
-      ". Please assign faculty from Subject Assignment."
+
+      "No faculty assigned for:<br><br>" +
+
+      missing
+        .map(
+          item =>
+            `• ${escapeHtml(item)}`
+        )
+        .join("<br>") +
+
+      "<br><br>" +
+
+      "Go to Subject Assignment and assign " +
+      "faculty before generating."
+
     );
 
   }
 
 }
+
 
 // ============================================================
 // GET ASSIGNED FACULTY
@@ -1532,135 +2342,117 @@ function getAssignedFaculty(
   const facultyIds =
     new Set();
 
+
   allFacultyAssignments.forEach(
-    assignment => {
+    assignmentDoc => {
 
       const facultyId =
-        assignment.facultyId;
+        assignmentDoc.facultyId;
+
 
       if (!facultyId) {
         return;
       }
 
-      // ------------------------------------------------------
-      // subjectIds FORMAT
-      // ------------------------------------------------------
 
-      if (
+      /*
+       * Nested assignments.
+       */
+
+      const assignments =
         Array.isArray(
-          assignment.subjectIds
-        ) &&
-        assignment.subjectIds.some(
-          id =>
-            String(id) ===
-            String(subjectId)
+          assignmentDoc.assignments
         )
-      ) {
+          ? assignmentDoc.assignments
+          : [];
 
-        let matches =
-          true;
 
-        if (
-          assignment.year !==
-            undefined &&
-          assignment.year !==
-            null &&
-          assignment.year !== ""
-        ) {
+      assignments.forEach(
+        assignment => {
 
-          matches =
-            matches &&
-            String(
+          if (
+            assignment.subjectId !==
+            subjectId
+          ) {
+
+            return;
+
+          }
+
+
+          const assignmentYear =
+            normalizeYear(
               assignment.year
-            ) ===
-            String(year);
+            );
 
-        }
 
-        if (
-          assignment.semester !==
-            undefined &&
-          assignment.semester !==
-            null &&
-          assignment.semester !== ""
-        ) {
+          const requestedYear =
+            normalizeYear(
+              year
+            );
 
-          matches =
-            matches &&
+
+          const assignmentSemester =
             Number(
               assignment.semester
-            ) ===
-            Number(semester);
+            );
 
-        }
 
-        if (
-          matches
-        ) {
+          if (
 
-          facultyIds.add(
-            facultyId
-          );
+            assignmentYear ===
+              requestedYear
 
-        }
+            &&
 
-      }
-
-      // ------------------------------------------------------
-      // assignments[] FORMAT
-      // ------------------------------------------------------
-
-      if (
-        Array.isArray(
-          assignment.assignments
-        )
-      ) {
-
-        assignment.assignments.forEach(
-          item => {
-
-            if (
-              String(
-                item.subjectId
-              ) !==
-              String(subjectId)
-            ) {
-              return;
-            }
-
-            if (
-              item.year !==
-                undefined &&
-              item.year !==
-                null &&
-              item.year !== "" &&
-              String(
-                item.year
-              ) !==
-              String(year)
-            ) {
-              return;
-            }
-
-            if (
-              item.semester !==
-                undefined &&
-              item.semester !==
-                null &&
-              item.semester !== "" &&
+            assignmentSemester ===
               Number(
-                item.semester
-              ) !==
-              Number(semester)
-            ) {
-              return;
-            }
+                semester
+              )
+
+          ) {
 
             facultyIds.add(
               facultyId
             );
 
           }
+
+        }
+      );
+
+
+      /*
+       * Backward-compatible format:
+       *
+       * facultyAssignments:
+       * {
+       *   facultyId,
+       *   subjectIds: [...]
+       * }
+       *
+       * If year/semester are absent from the
+       * document, subjectIds is treated as the
+       * assignment.
+       */
+
+      const subjectIds =
+        Array.isArray(
+          assignmentDoc.subjectIds
+        )
+          ? assignmentDoc.subjectIds
+          : [];
+
+
+      if (
+        subjectIds.includes(
+          subjectId
+        ) &&
+        assignments.length === 0
+      ) {
+
+        facultyIds.add(
+          facultyId
         );
 
       }
@@ -1668,46 +2460,464 @@ function getAssignedFaculty(
     }
   );
 
-  return allFaculty.filter(
-    faculty =>
-      facultyIds.has(
-        faculty.id
-      )
-  );
+
+  return Array.from(
+    facultyIds
+  )
+    .map(
+      facultyId =>
+        allFaculty.find(
+          faculty =>
+            faculty.id ===
+            facultyId
+        )
+    )
+    .filter(
+      Boolean
+    );
 
 }
 
+
 // ============================================================
-// CREATE SCHEDULE
+// CREATE ALL TASKS
 // ============================================================
 
-function createSchedule(
-  tasks,
-  workingDays,
-  facultyList,
-  rooms,
-  year,
-  semester,
-  external
+function createTasks(
+  semesters
 ) {
+
+  const tasks = [];
+
+
+  semesters.forEach(
+    semesterInfo => {
+
+      const subjects =
+        getSelectedSubjects(
+          semesterInfo
+        );
+
+
+      subjects.forEach(
+        subject => {
+
+          const lectureHours =
+            getLectureHours(
+              subject
+            );
+
+
+          const tutorialHours =
+            getTutorialHours(
+              subject
+            );
+
+
+          const practicalHours =
+            getPracticalHours(
+              subject
+            );
+
+
+          /*
+           * -----------------------------------------------
+           * LECTURES
+           * -----------------------------------------------
+           */
+
+          for (
+            let i = 0;
+            i < lectureHours;
+            i++
+          ) {
+
+            tasks.push({
+
+              id:
+                `${semesterInfo.key}-` +
+                `${subject.id}-L-${i}`,
+
+              subjectId:
+                subject.id,
+
+              subjectName:
+                subject.name ||
+                subject.subjectName ||
+                subject.id,
+
+              subjectCode:
+                subject.code ||
+                "",
+
+              year:
+                semesterInfo.year,
+
+              semester:
+                semesterInfo.semester,
+
+              semesterKey:
+                semesterInfo.key,
+
+              type:
+                "lecture",
+
+              duration:
+                1,
+
+              priority:
+                4
+
+            });
+
+          }
+
+
+          /*
+           * -----------------------------------------------
+           * TUTORIALS
+           * -----------------------------------------------
+           */
+
+          for (
+            let i = 0;
+            i < tutorialHours;
+            i++
+          ) {
+
+            tasks.push({
+
+              id:
+                `${semesterInfo.key}-` +
+                `${subject.id}-T-${i}`,
+
+              subjectId:
+                subject.id,
+
+              subjectName:
+                subject.name ||
+                subject.subjectName ||
+                subject.id,
+
+              subjectCode:
+                subject.code ||
+                "",
+
+              year:
+                semesterInfo.year,
+
+              semester:
+                semesterInfo.semester,
+
+              semesterKey:
+                semesterInfo.key,
+
+              type:
+                "tutorial",
+
+              duration:
+                1,
+
+              priority:
+                5
+
+            });
+
+          }
+
+
+          /*
+           * -----------------------------------------------
+           * PRACTICALS
+           * -----------------------------------------------
+           *
+           * P4 + P5 is not allowed.
+           *
+           * Practical hours are converted into
+           * 2-hour lab blocks.
+           */
+
+          let remaining =
+            practicalHours;
+
+
+          let labNumber =
+            1;
+
+
+          while (
+            remaining >= 2
+          ) {
+
+            let type =
+              "lab";
+
+
+            const subjectType =
+              String(
+                subject.type ||
+                ""
+              )
+                .trim()
+                .toLowerCase();
+
+
+            if (
+              subjectType ===
+              "project"
+            ) {
+
+              type =
+                "project";
+
+            }
+
+
+            if (
+              subjectType ===
+              "seminar"
+            ) {
+
+              type =
+                "seminar";
+
+            }
+
+
+            tasks.push({
+
+              id:
+                `${semesterInfo.key}-` +
+                `${subject.id}-P-${labNumber}`,
+
+              subjectId:
+                subject.id,
+
+              subjectName:
+                subject.name ||
+                subject.subjectName ||
+                subject.id,
+
+              subjectCode:
+                subject.code ||
+                "",
+
+              year:
+                semesterInfo.year,
+
+              semester:
+                semesterInfo.semester,
+
+              semesterKey:
+                semesterInfo.key,
+
+              type,
+
+              duration:
+                2,
+
+              priority:
+                type === "lab"
+                  ? 1
+                  : 2,
+
+              batches:
+                Array.isArray(
+                  subject.batches
+                )
+                  ? [
+                      ...subject.batches
+                    ]
+                  : []
+
+            });
+
+
+            remaining -=
+              2;
+
+
+            labNumber++;
+
+          }
+
+
+          /*
+           * -----------------------------------------------
+           * ODD PRACTICAL HOUR
+           * -----------------------------------------------
+           */
+
+          if (
+            remaining === 1
+          ) {
+
+            let type =
+              "lab";
+
+
+            const subjectType =
+              String(
+                subject.type ||
+                ""
+              )
+                .trim()
+                .toLowerCase();
+
+
+            if (
+              subjectType ===
+              "project"
+            ) {
+
+              type =
+                "project";
+
+            }
+
+
+            if (
+              subjectType ===
+              "seminar"
+            ) {
+
+              type =
+                "seminar";
+
+            }
+
+
+            tasks.push({
+
+              id:
+                `${semesterInfo.key}-` +
+                `${subject.id}-P-${labNumber}`,
+
+              subjectId:
+                subject.id,
+
+              subjectName:
+                subject.name ||
+                subject.subjectName ||
+                subject.id,
+
+              subjectCode:
+                subject.code ||
+                "",
+
+              year:
+                semesterInfo.year,
+
+              semester:
+                semesterInfo.semester,
+
+              semesterKey:
+                semesterInfo.key,
+
+              type,
+
+              duration:
+                1,
+
+              priority:
+                3
+
+            });
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+
+  /*
+   * Harder tasks first.
+   */
+
+  tasks.sort(
+    (a, b) => {
+
+      if (
+        b.duration !==
+        a.duration
+      ) {
+
+        return (
+          b.duration -
+          a.duration
+        );
+
+      }
+
+
+      return (
+        a.priority -
+        b.priority
+      );
+
+    }
+  );
+
+
+  return tasks;
+
+}
+
+
+// ============================================================
+// GLOBAL GENERATION
+// ============================================================
+
+function createGlobalSchedule(
+  tasks,
+  semesters
+) {
+
+  /*
+   * Existing timetable occupancy.
+   *
+   * These are copied into Sets and then the
+   * new semesters are scheduled around them.
+   */
+
+  const external =
+    buildExternalOccupancy(
+      semesters
+    );
+
 
   const facultyBusy =
     new Set(
       external.facultyBusy
     );
 
+
   const roomBusy =
     new Set(
       external.roomBusy
     );
 
-  const classBusy =
+
+  const cohortBusy =
     new Set();
+
+
+  const entries = [];
+
+
+  /*
+   * Faculty workload includes existing
+   * timetable workload.
+   */
 
   const facultyWorkload =
     new Map();
 
-  facultyList.forEach(
+
+  allFaculty.forEach(
     faculty => {
 
       facultyWorkload.set(
@@ -1718,172 +2928,437 @@ function createSchedule(
     }
   );
 
-  const entries = [];
 
-  // Randomize task order every attempt.
-  const orderedTasks =
-    shuffle(
-      [...tasks]
-    ).sort(
-      (a, b) => {
+  external.existingEntries
+    .forEach(
+      entry => {
 
         if (
-          a.duration !==
-          b.duration
+          !entry.facultyId
         ) {
 
-          return (
-            b.duration -
-            a.duration
-          );
+          return;
 
         }
 
-        return (
-          a.priority -
-          b.priority
+
+        const periods =
+          getEntryPeriods(
+            entry
+          );
+
+
+        facultyWorkload.set(
+
+          entry.facultyId,
+
+          (
+            facultyWorkload.get(
+              entry.facultyId
+            ) || 0
+          ) +
+          periods.length
+
         );
 
       }
     );
 
-  // ----------------------------------------------------------
-  // BACKTRACKING
-  // ----------------------------------------------------------
 
-  function placeTask(
-    index
-  ) {
+  const roomUsage =
+    new Map();
 
-    if (
-      index >=
-      orderedTasks.length
-    ) {
 
-      return true;
+  allRooms.forEach(
+    room => {
+
+      roomUsage.set(
+        room.id,
+        0
+      );
 
     }
+  );
 
-    const task =
-      orderedTasks[index];
+
+  external.existingEntries
+    .forEach(
+      entry => {
+
+        if (
+          !entry.roomId
+        ) {
+
+          return;
+
+        }
+
+
+        const periods =
+          getEntryPeriods(
+            entry
+          );
+
+
+        roomUsage.set(
+
+          entry.roomId,
+
+          (
+            roomUsage.get(
+              entry.roomId
+            ) || 0
+          ) +
+          periods.length
+
+        );
+
+      }
+    );
+
+
+  /*
+   * Randomize only to create different
+   * valid schedules between attempts.
+   */
+
+  const orderedTasks =
+    shuffle(
+      [...tasks]
+    );
+
+
+  /*
+   * Labs first.
+   */
+
+  orderedTasks.sort(
+    (a, b) => {
+
+      if (
+        b.duration !==
+        a.duration
+      ) {
+
+        return (
+          b.duration -
+          a.duration
+        );
+
+      }
+
+
+      return (
+        a.priority -
+        b.priority
+      );
+
+    }
+  );
+
+
+  for (
+    const task
+    of orderedTasks
+  ) {
 
     const candidates =
       findCandidates(
+
         task,
-        workingDays,
-        facultyList,
-        rooms,
+
         facultyBusy,
+
         roomBusy,
-        classBusy,
+
+        cohortBusy,
+
         facultyWorkload,
-        year,
-        semester
+
+        roomUsage
+
       );
+
 
     if (
       candidates.length === 0
     ) {
 
-      return false;
+      return {
+
+        success:
+          false,
+
+        message:
+          getTaskFailureMessage(
+            task
+          ),
+
+        entries
+
+      };
 
     }
 
-    // Least loaded faculty first.
+
+    /*
+     * Prefer:
+     *
+     * 1. lower faculty workload
+     * 2. lower room usage
+     * 3. random
+     */
+
     candidates.sort(
       (a, b) => {
 
-        const scoreA =
-          a.facultyWorkload * 10 +
-          a.roomUsage +
-          Math.random() * 2;
+        if (
+          a.facultyWorkload !==
+          b.facultyWorkload
+        ) {
 
-        const scoreB =
-          b.facultyWorkload * 10 +
-          b.roomUsage +
-          Math.random() * 2;
+          return (
+            a.facultyWorkload -
+            b.facultyWorkload
+          );
+
+        }
+
+
+        if (
+          a.roomUsage !==
+          b.roomUsage
+        ) {
+
+          return (
+            a.roomUsage -
+            b.roomUsage
+          );
+
+        }
+
 
         return (
-          scoreA -
-          scoreB
+          Math.random() -
+          0.5
         );
 
       }
     );
 
-    for (
-      const candidate of candidates
-    ) {
 
-      reserveCandidate(
-        candidate,
-        task,
-        year,
-        semester,
-        facultyBusy,
-        roomBusy,
-        classBusy,
-        facultyWorkload,
-        entries
-      );
+    /*
+     * Choose first candidate.
+     */
 
-      if (
-        placeTask(
-          index + 1
-        )
-      ) {
+    const selected =
+      candidates[0];
 
-        return true;
 
-      }
+    /*
+     * Reserve every period.
+     */
 
-      unreserveCandidate(
-        candidate,
-        task,
-        year,
-        semester,
-        facultyBusy,
-        roomBusy,
-        classBusy,
-        facultyWorkload,
-        entries
-      );
+    selected.periodIds
+      .forEach(
+        periodId => {
 
-    }
+          cohortBusy.add(
 
-    return false;
+            getClassKey(
+              task.semesterKey,
+              selected.day,
+              periodId
+            )
 
-  }
+          );
 
-  const success =
-    placeTask(0);
 
-  if (!success) {
+          facultyBusy.add(
 
-    const difficult =
-      orderedTasks.find(
-        task => {
+            getFacultyKey(
+              selected.faculty.id,
+              selected.day,
+              periodId
+            )
 
-          const candidates =
-            findCandidates(
-              task,
-              workingDays,
-              facultyList,
-              rooms,
-              facultyBusy,
-              roomBusy,
-              classBusy,
-              facultyWorkload,
-              year,
-              semester
-            );
+          );
 
-          return (
-            candidates.length === 0
+
+          roomBusy.add(
+
+            getRoomKey(
+              selected.room.id,
+              selected.day,
+              periodId
+            )
+
           );
 
         }
       );
+
+
+    /*
+     * Faculty workload.
+     */
+
+    facultyWorkload.set(
+
+      selected.faculty.id,
+
+      (
+        facultyWorkload.get(
+          selected.faculty.id
+        ) || 0
+      ) +
+      selected.periodIds.length
+
+    );
+
+
+    /*
+     * Room usage.
+     */
+
+    roomUsage.set(
+
+      selected.room.id,
+
+      (
+        roomUsage.get(
+          selected.room.id
+        ) || 0
+      ) +
+      selected.periodIds.length
+
+    );
+
+
+    /*
+     * Time information.
+     */
+
+    const firstPeriod =
+      PERIODS.find(
+        period =>
+          period.id ===
+          selected.periodIds[0]
+      );
+
+
+    const lastPeriod =
+      PERIODS.find(
+        period =>
+          period.id ===
+          selected.periodIds[
+            selected.periodIds.length - 1
+          ]
+      );
+
+
+    /*
+     * Save one entry for whole block.
+     */
+
+    entries.push({
+
+      id:
+        `${task.id}_` +
+        `${selected.day}_` +
+        `${selected.periodIds[0]}`,
+
+      subjectId:
+        task.subjectId,
+
+      subjectName:
+        task.subjectName,
+
+      subjectCode:
+        task.subjectCode,
+
+      year:
+        task.year,
+
+      semester:
+        task.semester,
+
+      semesterKey:
+        task.semesterKey,
+
+      type:
+        task.type,
+
+      day:
+        selected.day,
+
+      periods:
+        [
+          ...selected.periodIds
+        ],
+
+      startTime:
+        firstPeriod?.start ||
+        "",
+
+      endTime:
+        lastPeriod?.end ||
+        "",
+
+      facultyId:
+        selected.faculty.id,
+
+      facultyName:
+        selected.faculty.name,
+
+      roomId:
+        selected.room.id,
+
+      roomName:
+        selected.room.name,
+
+      roomType:
+        selected.room.type,
+
+      labType:
+        selected.room.labType ||
+        "",
+
+      batches:
+        selected.room.type ===
+        "lab"
+          ? (
+              Array.isArray(
+                selected.room.batches
+              )
+                ? [
+                    ...selected.room.batches
+                  ]
+                : []
+            )
+          : [],
+
+      taskId:
+        task.id
+
+    });
+
+  }
+
+
+  /*
+   * Final validation.
+   */
+
+  const validation =
+    validateFinalSchedule(
+      entries
+    );
+
+
+  if (
+    !validation.valid
+  ) {
 
     return {
 
@@ -1891,15 +3366,14 @@ function createSchedule(
         false,
 
       message:
-        difficult
-          ? `Unable to schedule "${difficult.subjectName}" (${difficult.type}). Check faculty assignment, faculty availability, rooms/labs and existing semester timetables.`
-          : "No conflict-free timetable was found.",
+        validation.reason,
 
-      entries: []
+      entries
 
     };
 
   }
+
 
   return {
 
@@ -1912,135 +3386,146 @@ function createSchedule(
 
 }
 
+
 // ============================================================
 // FIND CANDIDATES
 // ============================================================
 
 function findCandidates(
   task,
-  workingDays,
-  facultyList,
-  rooms,
   facultyBusy,
   roomBusy,
-  classBusy,
+  cohortBusy,
   facultyWorkload,
-  year,
-  semester
+  roomUsage
 ) {
 
   const candidates = [];
 
-  // ONLY faculty assigned to the subject.
+
   const assignedFaculty =
     getAssignedFaculty(
+
       task.subjectId,
-      year,
-      semester
+
+      task.year,
+
+      task.semester
+
     );
+
 
   if (
     assignedFaculty.length === 0
   ) {
 
-    return [];
+    return candidates;
 
   }
 
-  // ----------------------------------------------------------
-  // ROOM TYPE
-  // ----------------------------------------------------------
+
+  /*
+   * Suitable rooms.
+   */
 
   const suitableRooms =
-    rooms.filter(
+    allRooms.filter(
       room => {
 
-        // Actual laboratory.
+        const type =
+          String(
+            room.type ||
+            ""
+          )
+            .trim()
+            .toLowerCase();
+
+
         if (
-          task.type === "lab"
+          task.type ===
+          "lab"
         ) {
 
           return (
-            room.type ===
+            type ===
             "lab"
           );
 
         }
 
-        // Project can use classroom or lab.
+
+        /*
+         * Projects and seminars may use
+         * classroom or lab.
+         */
+
         if (
-          task.type === "project"
+          task.type ===
+          "project"
+          ||
+          task.type ===
+          "seminar"
         ) {
 
           return (
-            room.type ===
-              "classroom" ||
-            room.type ===
-              "lab"
-          );
 
-        }
-
-        // Seminar uses classroom.
-        if (
-          task.type === "seminar"
-        ) {
-
-          return (
-            room.type ===
+            type ===
             "classroom"
+
+            ||
+
+            type ===
+            "lab"
+
           );
 
         }
 
-        // Lecture/tutorial uses classroom.
+
+        /*
+         * Theory/tutorial use classroom.
+         */
+
         return (
-          room.type ===
+          type ===
           "classroom"
         );
 
       }
     );
 
+
   if (
     suitableRooms.length === 0
   ) {
 
-    return [];
+    return candidates;
 
   }
 
-  const dayOptions =
+
+  /*
+   * Random day order.
+   */
+
+  const days =
     shuffle(
-      [...workingDays]
+      [
+        ...selectedWorkingDays
+      ]
     );
 
-  const periodOptions =
-    task.duration === 2
-
-      ? shuffle(
-          TWO_HOUR_BLOCKS.map(
-            block =>
-              [...block]
-          )
-        )
-
-      : shuffle(
-          PERIODS.map(
-            period =>
-              [period.id]
-          )
-        );
-
-  // ----------------------------------------------------------
-  // DAYS
-  // ----------------------------------------------------------
 
   for (
-    const day of dayOptions
+    const day
+    of days
   ) {
 
-    const availableFaculty =
+    /*
+     * Check faculty availability.
+     */
+
+    const dayFaculty =
       assignedFaculty.filter(
         faculty => {
 
@@ -2051,132 +3536,194 @@ function findCandidates(
               ? faculty.availableDays
               : [];
 
-          // If availability exists,
-          // faculty must be available that day.
+
+          /*
+           * Empty availability means all days.
+           */
+
           if (
-            availableDays.length > 0 &&
-            !availableDays.includes(day)
+            availableDays.length ===
+            0
           ) {
 
-            return false;
+            return true;
 
           }
 
-          return facultyList.some(
-            f =>
-              f.id ===
-              faculty.id
+
+          return (
+            availableDays.includes(
+              day
+            )
           );
 
         }
       );
 
+
     if (
-      availableFaculty.length === 0
+      dayFaculty.length === 0
     ) {
 
       continue;
 
     }
 
-    // --------------------------------------------------------
-    // PERIODS
-    // --------------------------------------------------------
 
-    for (
-      const periodIds of periodOptions
+    /*
+     * Period options.
+     */
+
+    let periodOptions;
+
+
+    if (
+      task.duration === 2
     ) {
 
-      // Student/year clash.
-      const classAvailable =
-        periodIds.every(
-          periodId => {
+      periodOptions =
+        LAB_BLOCKS.map(
+          block =>
+            [
+              ...block
+            ]
+        );
 
-            return !classBusy.has(
+    } else {
+
+      periodOptions =
+        PERIODS.map(
+          period =>
+            [
+              period.id
+            ]
+        );
+
+    }
+
+
+    periodOptions =
+      shuffle(
+        periodOptions
+      );
+
+
+    /*
+     * Period loop.
+     */
+
+    for (
+      const periodIds
+      of periodOptions
+    ) {
+
+
+      /*
+       * Student/cohort clash.
+       */
+
+      const cohortAvailable =
+        periodIds.every(
+          periodId =>
+            !cohortBusy.has(
+
               getClassKey(
-                year,
-                semester,
+                task.semesterKey,
                 day,
                 periodId
               )
-            );
 
-          }
+            )
         );
 
+
       if (
-        !classAvailable
+        !cohortAvailable
       ) {
 
         continue;
 
       }
 
-      // Faculty clash.
-      const freeFaculty =
-        availableFaculty.filter(
+
+      /*
+       * Faculty candidates.
+       */
+
+      const facultyCandidates =
+        dayFaculty.filter(
           faculty => {
 
             return periodIds.every(
-              periodId => {
+              periodId =>
+                !facultyBusy.has(
 
-                return !facultyBusy.has(
                   getFacultyKey(
                     faculty.id,
                     day,
                     periodId
                   )
-                );
 
-              }
+                )
             );
 
           }
         );
 
+
       if (
-        freeFaculty.length === 0
+        facultyCandidates.length ===
+        0
       ) {
 
         continue;
 
       }
 
-      // Room clash.
-      const freeRooms =
+
+      /*
+       * Room candidates.
+       */
+
+      const roomCandidates =
         suitableRooms.filter(
           room => {
 
             return periodIds.every(
-              periodId => {
+              periodId =>
+                !roomBusy.has(
 
-                return !roomBusy.has(
                   getRoomKey(
                     room.id,
                     day,
                     periodId
                   )
-                );
 
-              }
+                )
             );
 
           }
         );
 
+
       if (
-        freeRooms.length === 0
+        roomCandidates.length ===
+        0
       ) {
 
         continue;
 
       }
 
-      // Create candidate combinations.
-      freeFaculty.forEach(
+
+      /*
+       * Faculty + room combinations.
+       */
+
+      facultyCandidates.forEach(
         faculty => {
 
-          freeRooms.forEach(
+          roomCandidates.forEach(
             room => {
 
               candidates.push({
@@ -2184,7 +3731,9 @@ function findCandidates(
                 day,
 
                 periodIds:
-                  [...periodIds],
+                  [
+                    ...periodIds
+                  ],
 
                 faculty,
 
@@ -2196,10 +3745,9 @@ function findCandidates(
                   ) || 0,
 
                 roomUsage:
-                  getRoomUsage(
-                    room.id,
-                    roomBusy
-                  )
+                  roomUsage.get(
+                    room.id
+                  ) || 0
 
               });
 
@@ -2213,283 +3761,79 @@ function findCandidates(
 
   }
 
+
   return candidates;
 
 }
 
-// ============================================================
-// RESERVE
-// ============================================================
-
-function reserveCandidate(
-  candidate,
-  task,
-  year,
-  semester,
-  facultyBusy,
-  roomBusy,
-  classBusy,
-  facultyWorkload,
-  entries
-) {
-
-  const blockId =
-    `${task.id}_${candidate.day}_${candidate.periodIds[0]}`;
-
-  candidate.periodIds.forEach(
-    periodId => {
-
-      classBusy.add(
-        getClassKey(
-          year,
-          semester,
-          candidate.day,
-          periodId
-        )
-      );
-
-      facultyBusy.add(
-        getFacultyKey(
-          candidate.faculty.id,
-          candidate.day,
-          periodId
-        )
-      );
-
-      roomBusy.add(
-        getRoomKey(
-          candidate.room.id,
-          candidate.day,
-          periodId
-        )
-      );
-
-      const period =
-        PERIODS.find(
-          p =>
-            p.id ===
-            periodId
-        );
-
-      entries.push({
-
-        id:
-          `${blockId}_${periodId}`,
-
-        blockId,
-
-        subjectId:
-          task.subjectId,
-
-        subjectName:
-          task.subjectName,
-
-        year:
-          task.year,
-
-        semester:
-          task.semester,
-
-        type:
-          task.type,
-
-        day:
-          candidate.day,
-
-        period:
-          periodId,
-
-        periods:
-          [...candidate.periodIds],
-
-        startTime:
-          period?.start || "",
-
-        endTime:
-          period?.end || "",
-
-        facultyId:
-          candidate.faculty.id,
-
-        facultyName:
-          candidate.faculty.name,
-
-        roomId:
-          candidate.room.id,
-
-        roomName:
-          candidate.room.name,
-
-        roomType:
-          candidate.room.type,
-
-        labType:
-          candidate.room.labType ||
-          "",
-
-        batches:
-          candidate.room.type ===
-          "lab"
-            ? [
-                ...candidate.room.batches
-              ]
-            : []
-
-      });
-
-    }
-  );
-
-  facultyWorkload.set(
-
-    candidate.faculty.id,
-
-    (
-      facultyWorkload.get(
-        candidate.faculty.id
-      ) || 0
-    ) +
-    candidate.periodIds.length
-
-  );
-
-}
 
 // ============================================================
-// UNRESERVE
+// EXTERNAL OCCUPANCY
 // ============================================================
-
-function unreserveCandidate(
-  candidate,
-  task,
-  year,
-  semester,
-  facultyBusy,
-  roomBusy,
-  classBusy,
-  facultyWorkload,
-  entries
-) {
-
-  candidate.periodIds.forEach(
-    periodId => {
-
-      classBusy.delete(
-        getClassKey(
-          year,
-          semester,
-          candidate.day,
-          periodId
-        )
-      );
-
-      facultyBusy.delete(
-        getFacultyKey(
-          candidate.faculty.id,
-          candidate.day,
-          periodId
-        )
-      );
-
-      roomBusy.delete(
-        getRoomKey(
-          candidate.room.id,
-          candidate.day,
-          periodId
-        )
-      );
-
-    }
-  );
-
-  facultyWorkload.set(
-
-    candidate.faculty.id,
-
-    Math.max(
-
-      0,
-
-      (
-        facultyWorkload.get(
-          candidate.faculty.id
-        ) || 0
-      ) -
-      candidate.periodIds.length
-
-    )
-
-  );
-
-  const blockId =
-    `${task.id}_${candidate.day}_${candidate.periodIds[0]}`;
-
-  for (
-    let i =
-      entries.length - 1;
-
-    i >= 0;
-
-    i--
-  ) {
-
-    if (
-      entries[i].blockId ===
-      blockId
-    ) {
-
-      entries.splice(
-        i,
-        1
-      );
-
-    }
-
-  }
-
-}
-
-// ============================================================
-// EXISTING TIMETABLE OCCUPANCY
+//
+// Existing timetables belonging to the semesters being
+// regenerated are ignored.
+//
+// Example:
+//
+// Odd generation:
+//
+// SE-3
+// TE-5
+// BE-7
+//
+// Existing SE-3/TE-5/BE-7 are ignored.
+// Other timetable documents remain blocked.
 // ============================================================
 
 function buildExternalOccupancy(
-  currentYear,
-  currentSemester
+  targetSemesters
 ) {
 
   const facultyBusy =
     new Set();
 
+
   const roomBusy =
     new Set();
+
+
+  const existingEntries =
+    [];
+
+
+  const targetKeys =
+    new Set(
+      targetSemesters.map(
+        semesterInfo =>
+          semesterInfo.key
+      )
+    );
+
 
   existingTimetables.forEach(
     timetable => {
 
-      // Don't reserve the timetable
-      // currently being regenerated.
-      const sameTimetable =
-        String(
-          timetable.year
-        ) ===
-        String(
-          currentYear
-        ) &&
-        Number(
-          timetable.semester
-        ) ===
-        Number(
-          currentSemester
+      const timetableKey =
+        getTimetableKey(
+          timetable
         );
 
+
+      /*
+       * Do not block target semesters.
+       */
+
       if (
-        sameTimetable
+        targetKeys.has(
+          timetableKey
+        )
       ) {
 
         return;
 
       }
+
 
       const entries =
         Array.isArray(
@@ -2498,47 +3842,81 @@ function buildExternalOccupancy(
           ? timetable.entries
           : [];
 
+
       entries.forEach(
         entry => {
 
           if (
             !entry.day
           ) {
+
             return;
+
           }
+
 
           const periods =
             getEntryPeriods(
               entry
             );
 
+
+          if (
+            periods.length ===
+            0
+          ) {
+
+            return;
+
+          }
+
+
+          existingEntries.push(
+            entry
+          );
+
+
           periods.forEach(
             periodId => {
+
+
+              /*
+               * Faculty.
+               */
 
               if (
                 entry.facultyId
               ) {
 
                 facultyBusy.add(
+
                   getFacultyKey(
                     entry.facultyId,
                     entry.day,
                     periodId
                   )
+
                 );
 
               }
+
+
+              /*
+               * Room.
+               */
 
               if (
                 entry.roomId
               ) {
 
                 roomBusy.add(
+
                   getRoomKey(
                     entry.roomId,
                     entry.day,
                     periodId
                   )
+
                 );
 
               }
@@ -2552,15 +3930,61 @@ function buildExternalOccupancy(
     }
   );
 
+
   return {
 
     facultyBusy,
 
-    roomBusy
+    roomBusy,
+
+    existingEntries
 
   };
 
 }
+
+
+// ============================================================
+// TIMETABLE KEY
+// ============================================================
+
+function getTimetableKey(
+  timetable
+) {
+
+  if (
+    timetable.semesterKey
+  ) {
+
+    return String(
+      timetable.semesterKey
+    );
+
+  }
+
+
+  if (
+    timetable.year !== undefined &&
+    timetable.semester !== undefined
+  ) {
+
+    return (
+
+      `${normalizeYear(
+        timetable.year
+      )}-${Number(
+        timetable.semester
+      )}`
+
+    );
+
+  }
+
+
+  return "";
+
+}
+
 
 // ============================================================
 // ENTRY PERIODS
@@ -2573,13 +3997,15 @@ function getEntryPeriods(
   if (
     Array.isArray(
       entry.periods
-    ) &&
-    entry.periods.length
+    )
   ) {
 
-    return entry.periods;
+    return [
+      ...entry.periods
+    ];
 
   }
+
 
   if (
     entry.period
@@ -2591,26 +4017,950 @@ function getEntryPeriods(
 
   }
 
+
   return [];
 
 }
 
+
 // ============================================================
-// KEYS
+// FINAL VALIDATION
+// ============================================================
+
+function validateFinalSchedule(
+  entries
+) {
+
+  const facultyBusy =
+    new Set();
+
+
+  const roomBusy =
+    new Set();
+
+
+  const cohortBusy =
+    new Set();
+
+
+  for (
+    const entry
+    of entries
+  ) {
+
+    const periods =
+      getEntryPeriods(
+        entry
+      );
+
+
+    for (
+      const periodId
+      of periods
+    ) {
+
+
+      /*
+       * Faculty clash.
+       */
+
+      const facultyKey =
+        getFacultyKey(
+          entry.facultyId,
+          entry.day,
+          periodId
+        );
+
+
+      if (
+        facultyBusy.has(
+          facultyKey
+        )
+      ) {
+
+        return {
+
+          valid:
+            false,
+
+          reason:
+
+            `Faculty clash for ` +
+            `${entry.facultyName || entry.facultyId} ` +
+            `on ${entry.day} ${periodId}.`
+
+        };
+
+      }
+
+
+      facultyBusy.add(
+        facultyKey
+      );
+
+
+      /*
+       * Room clash.
+       */
+
+      const roomKey =
+        getRoomKey(
+          entry.roomId,
+          entry.day,
+          periodId
+        );
+
+
+      if (
+        roomBusy.has(
+          roomKey
+        )
+      ) {
+
+        return {
+
+          valid:
+            false,
+
+          reason:
+
+            `Room clash for ` +
+            `${entry.roomName || entry.roomId} ` +
+            `on ${entry.day} ${periodId}.`
+
+        };
+
+      }
+
+
+      roomBusy.add(
+        roomKey
+      );
+
+
+      /*
+       * Student/cohort clash.
+       */
+
+      const cohortKey =
+        getClassKey(
+          entry.semesterKey ||
+          `${entry.year}-${entry.semester}`,
+          entry.day,
+          periodId
+        );
+
+
+      if (
+        cohortBusy.has(
+          cohortKey
+        )
+      ) {
+
+        return {
+
+          valid:
+            false,
+
+          reason:
+
+            `Student/cohort clash for ` +
+            `${entry.year}-${entry.semester} ` +
+            `on ${entry.day} ${periodId}.`
+
+        };
+
+      }
+
+
+      cohortBusy.add(
+        cohortKey
+      );
+
+    }
+
+  }
+
+
+  return {
+
+    valid:
+      true
+
+  };
+
+}
+
+
+// ============================================================
+// GENERATE TIMETABLES
+// ============================================================
+
+async function generateTimetables() {
+
+  const button =
+    document.querySelector(
+      "#generateButton"
+    );
+
+
+  try {
+
+    clearMessage();
+
+
+    updateWorkingDays();
+
+
+    if (
+      selectedWorkingDays.length ===
+      0
+    ) {
+
+      throw new Error(
+        "Select at least one working day."
+      );
+
+    }
+
+
+    const semesters =
+      getTargetSemesters();
+
+
+    if (
+      semesters.length ===
+      0
+    ) {
+
+      throw new Error(
+        "Please select an academic year and semester."
+      );
+
+    }
+
+
+    validateElectiveSelections(
+      semesters
+    );
+
+
+    /*
+     * Check that every target semester has subjects.
+     */
+
+    for (
+      const semesterInfo
+      of semesters
+    ) {
+
+      const subjects =
+        getSelectedSubjects(
+          semesterInfo
+        );
+
+
+      if (
+        subjects.length ===
+        0
+      ) {
+
+        throw new Error(
+
+          `No subjects found for ` +
+          `${semesterInfo.key}.`
+
+        );
+
+      }
+
+    }
+
+
+    /*
+     * Validate assignments.
+     */
+
+    validateSubjectAssignments(
+      semesters
+    );
+
+
+    /*
+     * Calculate total periods.
+     */
+
+    let totalRequired =
+      0;
+
+
+    semesters.forEach(
+      semesterInfo => {
+
+        const subjects =
+          getSelectedSubjects(
+            semesterInfo
+          );
+
+
+        totalRequired +=
+          calculateLoad(
+            subjects
+          ).total;
+
+      }
+    );
+
+
+    const availableStudentPeriods =
+      semesters.length *
+      selectedWorkingDays.length *
+      PERIODS.length;
+
+
+    if (
+      totalRequired >
+      availableStudentPeriods
+    ) {
+
+      throw new Error(
+
+        `Required ${totalRequired} periods, ` +
+        `but only ${availableStudentPeriods} student periods ` +
+        `are available.`
+
+      );
+
+    }
+
+
+    if (button) {
+
+      button.disabled =
+        true;
+
+      button.textContent =
+        "Generating...";
+
+    }
+
+
+    showStatus(
+
+      `Preparing timetable for ` +
+      `${semesters.map(
+        item => item.key
+      ).join(", ")}...`,
+
+      "info"
+
+    );
+
+
+    const tasks =
+      createTasks(
+        semesters
+      );
+
+
+    if (
+      tasks.length ===
+      0
+    ) {
+
+      throw new Error(
+        "No scheduling tasks were created."
+      );
+
+    }
+
+
+    let result =
+      null;
+
+
+    let lastMessage =
+      "";
+
+
+    /*
+     * Multiple attempts.
+     */
+
+    for (
+      let attempt = 1;
+      attempt <=
+      MAX_GENERATION_ATTEMPTS;
+      attempt++
+    ) {
+
+      showStatus(
+
+        `Generating timetable... ` +
+        `Attempt ${attempt}/${MAX_GENERATION_ATTEMPTS}`,
+
+        "info"
+
+      );
+
+
+      result =
+        createGlobalSchedule(
+          tasks,
+          semesters
+        );
+
+
+      if (
+        result.success
+      ) {
+
+        break;
+
+      }
+
+
+      lastMessage =
+        result.message ||
+        "";
+
+    }
+
+
+    if (
+      !result ||
+      !result.success
+    ) {
+
+      throw new Error(
+
+        lastMessage ||
+
+        "Unable to generate a conflict-free timetable. " +
+
+        "Check faculty assignments, faculty availability, " +
+
+        "rooms/labs and working days."
+
+      );
+
+    }
+
+
+    /*
+     * Save all selected semesters.
+     */
+
+    showStatus(
+      "Saving generated timetables...",
+      "info"
+    );
+
+
+    await saveGeneratedTimetables(
+      result.entries,
+      semesters
+    );
+
+
+    /*
+     * Update local timetable cache.
+     */
+
+    semesters.forEach(
+      semesterInfo => {
+
+        const entries =
+          result.entries.filter(
+            entry =>
+              entry.semesterKey ===
+              semesterInfo.key
+          );
+
+
+        existingTimetables =
+          existingTimetables.filter(
+            timetable =>
+              getTimetableKey(
+                timetable
+              ) !==
+              semesterInfo.key
+          );
+
+
+        existingTimetables.push({
+
+          id:
+            `${semesterInfo.year}_${semesterInfo.semester}`,
+
+          year:
+            semesterInfo.year,
+
+          semester:
+            semesterInfo.semester,
+
+          semesterKey:
+            semesterInfo.key,
+
+          entries
+
+        });
+
+      }
+    );
+
+
+    /*
+     * Result.
+     */
+
+    renderGenerationResult(
+      result.entries,
+      semesters
+    );
+
+
+    showStatus(
+
+      `Timetable generated successfully. ` +
+      `${result.entries.length} teaching blocks scheduled.`,
+
+      "success"
+
+    );
+
+
+    showMessage(
+
+      `Timetable generated successfully for ` +
+      `${semesters
+        .map(
+          item =>
+            item.key
+        )
+        .join(", ")}. ` +
+
+      `Cross-semester faculty, room and cohort ` +
+      `coordination is enabled.`,
+
+      "success"
+
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Timetable generation error:",
+      error
+    );
+
+
+    showStatus(
+      "Timetable generation failed.",
+      "error"
+    );
+
+
+    showMessage(
+      error.message ||
+      "Unable to generate timetable.",
+      "error"
+    );
+
+
+  } finally {
+
+    if (button) {
+
+      button.disabled =
+        false;
+
+      button.textContent =
+        "Generate Timetable";
+
+    }
+
+  }
+
+}
+
+
+// ============================================================
+// SAVE GENERATED TIMETABLES
+// ============================================================
+
+async function saveGeneratedTimetables(
+  entries,
+  semesters
+) {
+
+  for (
+    const semesterInfo
+    of semesters
+  ) {
+
+    const semesterEntries =
+      entries.filter(
+        entry =>
+          entry.semesterKey ===
+          semesterInfo.key
+      );
+
+
+    const load =
+      calculateLoad(
+        getSelectedSubjects(
+          semesterInfo
+        )
+      );
+
+
+    const teacherInfo =
+      getTeacherRequirement(
+        semesterInfo,
+        getSelectedSubjects(
+          semesterInfo
+        )
+      );
+
+
+    const timetableId =
+      `${semesterInfo.year}_${semesterInfo.semester}`;
+
+
+    await setDoc(
+
+      doc(
+        db,
+        "timetables",
+        timetableId
+      ),
+
+      {
+
+        year:
+          semesterInfo.year,
+
+        semester:
+          semesterInfo.semester,
+
+        semesterKey:
+          semesterInfo.key,
+
+        workingDays:
+          [
+            ...selectedWorkingDays
+          ],
+
+        periods:
+          PERIODS,
+
+        load,
+
+        entries:
+          semesterEntries,
+
+        generatedAt:
+          serverTimestamp(),
+
+        generationInfo: {
+
+          coordinated:
+            true,
+
+          generationScope:
+            getGenerationScope(),
+
+          totalSubjects:
+            getSelectedSubjects(
+              semesterInfo
+            ).length,
+
+          totalBlocks:
+            semesterEntries.length,
+
+          facultyCount:
+            teacherInfo.assignedCount,
+
+          minimumTeachersRequired:
+            teacherInfo.minimumRequired,
+
+          assignedFacultyCapacity:
+            teacherInfo.totalAssignedCapacity,
+
+          roomCount:
+            allRooms.length,
+
+          labCount:
+            allRooms.filter(
+              room =>
+                room.type ===
+                "lab"
+            ).length
+
+        }
+
+      }
+
+    );
+
+  }
+
+}
+
+
+// ============================================================
+// FAILURE MESSAGE
+// ============================================================
+
+function getTaskFailureMessage(
+  task
+) {
+
+  const assignedFaculty =
+    getAssignedFaculty(
+      task.subjectId,
+      task.year,
+      task.semester
+    );
+
+
+  const facultyNames =
+    assignedFaculty
+      .map(
+        faculty =>
+          faculty.name
+      )
+      .filter(
+        Boolean
+      );
+
+
+  if (
+    assignedFaculty.length ===
+    0
+  ) {
+
+    return (
+
+      `Unable to schedule "${task.subjectName}" ` +
+      `for ${task.semesterKey}. ` +
+      `No faculty is assigned to this subject.`
+
+    );
+
+  }
+
+
+  if (
+    task.type ===
+    "lab"
+  ) {
+
+    return (
+
+      `Unable to schedule lab "${task.subjectName}" ` +
+      `for ${task.semesterKey}. ` +
+      `Check available laboratories, valid lab blocks ` +
+      `and faculty availability. ` +
+      `Assigned faculty: ${facultyNames.join(", ")}`
+
+    );
+
+  }
+
+
+  return (
+
+    `Unable to schedule "${task.subjectName}" ` +
+    `(${task.type}) for ${task.semesterKey}. ` +
+    `Check faculty availability, classroom capacity ` +
+    `and cross-semester clashes. ` +
+    `Assigned faculty: ${facultyNames.join(", ")}`
+
+  );
+
+}
+
+
+// ============================================================
+// GENERATION RESULT
+// ============================================================
+
+function renderGenerationResult(
+  entries,
+  semesters
+) {
+
+  const element =
+    document.querySelector(
+      "#generationStatus"
+    );
+
+
+  if (!element) {
+    return;
+  }
+
+
+  const totalEntries =
+    entries.length;
+
+
+  const totalLectures =
+    entries.filter(
+      entry =>
+        entry.type ===
+        "lecture"
+    ).length;
+
+
+  const totalTutorials =
+    entries.filter(
+      entry =>
+        entry.type ===
+        "tutorial"
+    ).length;
+
+
+  const totalLabs =
+    entries.filter(
+      entry =>
+        entry.type ===
+          "lab"
+        ||
+        entry.type ===
+          "project"
+        ||
+        entry.type ===
+          "seminar"
+    ).length;
+
+
+  const semesterText =
+    semesters
+      .map(
+        semester =>
+          semester.key
+      )
+      .join(", ");
+
+
+  element.innerHTML = `
+
+    <div class="status-summary">
+
+      <strong>
+        Timetable Generated
+      </strong>
+
+
+      <div style="margin-top:8px;">
+
+        <strong>
+          Semesters:
+        </strong>
+
+        ${escapeHtml(
+          semesterText
+        )}
+
+      </div>
+
+
+      <div>
+
+        Scheduled teaching blocks:
+        ${totalEntries}
+
+      </div>
+
+
+      <div>
+
+        Lecture blocks:
+        ${totalLectures}
+
+      </div>
+
+
+      <div>
+
+        Tutorial blocks:
+        ${totalTutorials}
+
+      </div>
+
+
+      <div>
+
+        Lab/Project/Seminar blocks:
+        ${totalLabs}
+
+      </div>
+
+
+      <div>
+
+        Faculty clashes:
+        0
+
+      </div>
+
+
+      <div>
+
+        Classroom/Lab clashes:
+        0
+
+      </div>
+
+
+      <div>
+
+        Student/cohort clashes:
+        0
+
+      </div>
+
+
+      <div>
+
+        Cross-semester coordination:
+        Enabled
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+// ============================================================
+// CLASS KEY
 // ============================================================
 
 function getClassKey(
-  year,
-  semester,
+  semesterKey,
   day,
   period
 ) {
 
   return (
-    `${year}_${semester}_${day}_${period}`
+
+    `${semesterKey}_${day}_${period}`
+
   );
 
 }
+
+
+// ============================================================
+// FACULTY KEY
+// ============================================================
 
 function getFacultyKey(
   facultyId,
@@ -2619,10 +4969,17 @@ function getFacultyKey(
 ) {
 
   return (
+
     `${facultyId}_${day}_${period}`
+
   );
 
 }
+
+
+// ============================================================
+// ROOM KEY
+// ============================================================
 
 function getRoomKey(
   roomId,
@@ -2631,128 +4988,31 @@ function getRoomKey(
 ) {
 
   return (
+
     `${roomId}_${day}_${period}`
+
   );
 
 }
 
+
 // ============================================================
-// ROOM USAGE
+// NORMALIZE YEAR
 // ============================================================
 
-function getRoomUsage(
-  roomId,
-  roomBusy
+function normalizeYear(
+  value
 ) {
 
-  let count = 0;
-
-  const prefix =
-    `${roomId}_`;
-
-  roomBusy.forEach(
-    key => {
-
-      if (
-        key.startsWith(
-          prefix
-        )
-      ) {
-
-        count++;
-
-      }
-
-    }
-  );
-
-  return count;
+  return String(
+    value ||
+    ""
+  )
+    .trim()
+    .toUpperCase();
 
 }
 
-// ============================================================
-// RESULT
-// ============================================================
-
-function renderGenerationResult(
-  entries,
-  load
-) {
-
-  const status =
-    document.querySelector(
-      "#generationStatus"
-    );
-
-  if (!status) {
-    return;
-  }
-
-  status.innerHTML = `
-
-    <strong>
-      Timetable Generated Successfully
-    </strong>
-
-    <div
-      style="margin-top:10px;"
-    >
-
-      Lectures:
-      ${load.L}
-
-      &nbsp; | &nbsp;
-
-      Tutorials:
-      ${load.T}
-
-      &nbsp; | &nbsp;
-
-      Practicals:
-      ${load.P}
-
-      &nbsp; | &nbsp;
-
-      Total:
-      ${load.total}
-
-    </div>
-
-    <div
-      style="margin-top:8px;"
-    >
-
-      Scheduled entries:
-      ${entries.length}
-
-    </div>
-
-    <div
-      style="margin-top:8px;"
-    >
-
-      Faculty clash prevention:
-      Enabled
-
-    </div>
-
-    <div>
-
-      Classroom/Lab clash prevention:
-      Enabled
-
-    </div>
-
-    <div>
-
-      Cross-semester coordination:
-      Enabled
-
-    </div>
-
-  `;
-
-}
 
 // ============================================================
 // STATUS
@@ -2763,23 +5023,32 @@ function showStatus(
   type = "info"
 ) {
 
-  const status =
+  const element =
     document.querySelector(
-      "#generationStatus"
+      "#generatorMessage"
     );
 
-  if (status) {
 
-    status.textContent =
-      message;
+  if (!element) {
+
+    console.log(
+      `[${type}] ${message}`
+    );
+
+    return;
 
   }
 
-  console.log(
-    `[${type}] ${message}`
-  );
+
+  element.innerHTML =
+    message;
+
+
+  element.className =
+    `form-message ${type}`;
 
 }
+
 
 // ============================================================
 // MESSAGE
@@ -2795,23 +5064,21 @@ function showMessage(
       "#generatorMessage"
     );
 
+
   if (!element) {
-
-    console.log(
-      `[${type}] ${message}`
-    );
-
     return;
-
   }
 
-  element.textContent =
+
+  element.innerHTML =
     message;
+
 
   element.className =
     `form-message ${type}`;
 
 }
+
 
 // ============================================================
 // CLEAR MESSAGE
@@ -2824,40 +5091,24 @@ function clearMessage() {
       "#generatorMessage"
     );
 
+
   if (!element) {
     return;
   }
 
-  element.textContent =
+
+  element.innerHTML =
     "";
+
 
   element.className =
     "form-message";
 
 }
 
-// ============================================================
-// BUTTON
-// ============================================================
-
-function setButtonGenerating(
-  button
-) {
-
-  if (!button) {
-    return;
-  }
-
-  button.disabled =
-    true;
-
-  button.textContent =
-    "Generating...";
-
-}
 
 // ============================================================
-// TEXT
+// SET TEXT
 // ============================================================
 
 function setText(
@@ -2870,7 +5121,10 @@ function setText(
       selector
     );
 
-  if (element) {
+
+  if (
+    element
+  ) {
 
     element.textContent =
       value;
@@ -2879,29 +5133,29 @@ function setText(
 
 }
 
+
 // ============================================================
 // NUMBER
 // ============================================================
 
-function num(
+function numberValue(
   value
 ) {
 
-  const number =
-    Number(value);
+  const result =
+    Number(
+      value
+    );
 
-  if (
-    Number.isFinite(number) &&
-    number >= 0
-  ) {
 
-    return number;
-
-  }
-
-  return 0;
+  return Number.isFinite(
+    result
+  )
+    ? result
+    : 0;
 
 }
+
 
 // ============================================================
 // SHUFFLE
@@ -2912,7 +5166,10 @@ function shuffle(
 ) {
 
   const result =
-    [...array];
+    [
+      ...array
+    ];
+
 
   for (
     let i =
@@ -2929,19 +5186,24 @@ function shuffle(
         (i + 1)
       );
 
+
     [
       result[i],
       result[j]
     ] = [
+
       result[j],
       result[i]
+
     ];
 
   }
 
+
   return result;
 
 }
+
 
 // ============================================================
 // ESCAPE HTML
@@ -2952,30 +5214,37 @@ function escapeHtml(
 ) {
 
   return String(
-    value ?? ""
+    value ??
+    ""
   )
-  .replaceAll(
-    "&",
-    "&amp;"
-  )
-  .replaceAll(
-    "<",
-    "&lt;"
-  )
-  .replaceAll(
-    ">",
-    "&gt;"
-  )
-  .replaceAll(
-    '"',
-    "&quot;"
-  )
-  .replaceAll(
-    "'",
-    "&#039;"
-  );
+
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
 
 }
+
 
 // ============================================================
 // ESCAPE ATTRIBUTE
@@ -2991,36 +5260,26 @@ function escapeAttribute(
 
 }
 
-// ============================================================
-// ESCAPE CSS
-// ============================================================
-
-function escapeCss(
-  value
-) {
-
-  if (
-    window.CSS &&
-    typeof window.CSS.escape ===
-      "function"
-  ) {
-
-    return window.CSS.escape(
-      value
-    );
-
-  }
-
-  return String(value)
-    .replace(
-      /([ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g,
-      "\\$1"
-    );
-
-}
 
 // ============================================================
 // START
 // ============================================================
 
-initialisePage();
+initialisePage()
+  .catch(
+    error => {
+
+      if (
+        error.message !==
+        "Firebase has not been configured."
+      ) {
+
+        console.error(
+          "Generator page error:",
+          error
+        );
+
+      }
+
+    }
+  );

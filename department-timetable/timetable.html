@@ -1,25 +1,325 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Timetable | Timely</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <title>
+    Timetable | Timely
+  </title>
+
+
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+  >
+
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+  >
+
 
   <link
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
     rel="stylesheet"
   >
 
-  <link rel="stylesheet" href="css/style.css">
+
+  <link
+    rel="stylesheet"
+    href="css/style.css"
+  >
+
+
+  <!-- =====================================================
+       PRINT ONLY STYLES
+       Only #printTimetableArea will be printed.
+  ====================================================== -->
+
+  <style>
+
+    @media print {
+
+      /* -----------------------------------------------
+         Hide entire application
+      ----------------------------------------------- */
+
+      body * {
+
+        visibility: hidden !important;
+
+      }
+
+
+      /* -----------------------------------------------
+         Show ONLY timetable print area
+      ----------------------------------------------- */
+
+      #printTimetableArea,
+      #printTimetableArea * {
+
+        visibility: visible !important;
+
+      }
+
+
+      /* -----------------------------------------------
+         Position timetable at top of page
+      ----------------------------------------------- */
+
+      #printTimetableArea {
+
+        position: absolute !important;
+
+        left: 0 !important;
+
+        top: 0 !important;
+
+        width: 100% !important;
+
+        margin: 0 !important;
+
+        padding: 0 !important;
+
+        background: #ffffff !important;
+
+        border: none !important;
+
+        box-shadow: none !important;
+
+      }
+
+
+      /* -----------------------------------------------
+         Remove horizontal scrolling
+      ----------------------------------------------- */
+
+      #timetableContainer {
+
+        overflow: visible !important;
+
+        margin: 0 !important;
+
+        padding: 0 !important;
+
+      }
+
+
+      /* -----------------------------------------------
+         Print title
+      ----------------------------------------------- */
+
+      #printHeading {
+
+        display: block !important;
+
+        text-align: center;
+
+        margin-bottom: 12px;
+
+      }
+
+
+      #printHeading h1 {
+
+        margin: 0 0 4px 0 !important;
+
+        font-size: 20px !important;
+
+        font-weight: 700 !important;
+
+        color: #000000 !important;
+
+      }
+
+
+      #printHeading p {
+
+        margin: 0 !important;
+
+        font-size: 12px !important;
+
+        color: #000000 !important;
+
+      }
+
+
+      /* -----------------------------------------------
+         Timetable table
+      ----------------------------------------------- */
+
+      #timetableContainer table {
+
+        width: 100% !important;
+
+        min-width: 0 !important;
+
+        table-layout: fixed !important;
+
+        border-collapse: collapse !important;
+
+        border-spacing: 0 !important;
+
+        background: #ffffff !important;
+
+      }
+
+
+      #timetableContainer th,
+      #timetableContainer td {
+
+        border: 1px solid #000000 !important;
+
+        color: #000000 !important;
+
+        background: #ffffff !important;
+
+        box-shadow: none !important;
+
+      }
+
+
+      #timetableContainer th {
+
+        text-align: center !important;
+
+        vertical-align: middle !important;
+
+        padding: 7px 5px !important;
+
+        font-size: 11px !important;
+
+      }
+
+
+      #timetableContainer td {
+
+        padding: 7px !important;
+
+        vertical-align: top !important;
+
+        font-size: 10px !important;
+
+      }
+
+
+      /* -----------------------------------------------
+         Day column
+      ----------------------------------------------- */
+
+      #timetableContainer th:first-child,
+      #timetableContainer td:first-child {
+
+        width: 10% !important;
+
+        min-width: 0 !important;
+
+        position: static !important;
+
+      }
+
+
+      /* -----------------------------------------------
+         Period columns
+      ----------------------------------------------- */
+
+      #timetableContainer th:not(:first-child),
+      #timetableContainer td:not(:first-child) {
+
+        width: 15% !important;
+
+        min-width: 0 !important;
+
+      }
+
+
+      /* -----------------------------------------------
+         Remove screen-only sticky positioning
+      ----------------------------------------------- */
+
+      #timetableContainer th,
+      #timetableContainer td {
+
+        position: static !important;
+
+      }
+
+
+      /* -----------------------------------------------
+         Prevent rows from splitting
+      ----------------------------------------------- */
+
+      #timetableContainer tr {
+
+        page-break-inside: avoid !important;
+
+        break-inside: avoid !important;
+
+      }
+
+
+      /* -----------------------------------------------
+         Do not print empty-state
+      ----------------------------------------------- */
+
+      .empty-state {
+
+        color: #000000 !important;
+
+      }
+
+
+      /* -----------------------------------------------
+         A4 landscape
+      ----------------------------------------------- */
+
+      @page {
+
+        size: A4 landscape;
+
+        margin: 8mm;
+
+      }
+
+    }
+
+
+    /* -----------------------------------------------
+       Screen
+       Print heading hidden during normal use
+    ----------------------------------------------- */
+
+    #printHeading {
+
+      display: none;
+
+    }
+
+  </style>
+
 </head>
 
-<body class="app-page" data-page="timetable">
+
+<body
+  class="app-page"
+  data-page="timetable"
+>
+
 
 <div class="app-shell">
+
+
+  <!-- ===================================================
+       SIDEBAR
+  ==================================================== -->
 
   <aside
     class="app-sidebar"
@@ -27,11 +327,16 @@
   ></aside>
 
 
+  <!-- ===================================================
+       MAIN CONTENT
+  ==================================================== -->
+
   <main
     class="app-content"
     id="protectedContent"
     hidden
   >
+
 
     <p class="page-eyebrow">
       Weekly schedule
@@ -55,12 +360,18 @@
     </div>
 
 
-    <!-- SELECT TIMETABLE -->
+    <!-- =================================================
+         SELECT TIMETABLE
+    ================================================== -->
 
     <section
       class="dashboard-card"
-      style="padding:24px;margin-top:24px;"
+      style="
+        padding:24px;
+        margin-top:24px;
+      "
     >
+
 
       <div class="card-heading">
 
@@ -82,17 +393,25 @@
       <div
         style="
           display:grid;
-          grid-template-columns:repeat(2,minmax(0,1fr));
+          grid-template-columns:
+            repeat(
+              2,
+              minmax(0,1fr)
+            );
           gap:18px;
           margin-top:22px;
         "
       >
+
+
+        <!-- YEAR -->
 
         <div class="form-field">
 
           <label for="academicYear">
             Academic Year
           </label>
+
 
           <select
             id="academicYear"
@@ -116,11 +435,14 @@
         </div>
 
 
+        <!-- SEMESTER -->
+
         <div class="form-field">
 
           <label for="semester">
             Semester
           </label>
+
 
           <select
             id="semester"
@@ -158,6 +480,8 @@
       </div>
 
 
+      <!-- BUTTONS -->
+
       <div
         style="
           display:flex;
@@ -174,6 +498,7 @@
         >
           Refresh
         </button>
+
 
         <button
           type="button"
@@ -192,20 +517,48 @@
         style="margin-top:16px;"
       ></div>
 
+
     </section>
 
 
-    <!-- TIMETABLE -->
+    <!-- =================================================
+         TIMETABLE
+         THIS IS THE ONLY PART THAT WILL PRINT
+    ================================================== -->
 
     <section
       class="dashboard-card"
+      id="printTimetableArea"
       style="
         padding:24px;
         margin-top:24px;
       "
     >
 
-      <div class="card-heading">
+
+      <!-- PRINT HEADER -->
+
+      <div
+        id="printHeading"
+      >
+
+        <h1 id="printTitle">
+          Timetable
+        </h1>
+
+        <p id="printSubtitle">
+          Weekly Schedule
+        </p>
+
+      </div>
+
+
+      <!-- NORMAL SCREEN HEADING -->
+
+      <div
+        class="card-heading"
+        id="screenTimetableHeading"
+      >
 
         <div>
 
@@ -213,9 +566,11 @@
             Weekly schedule
           </p>
 
+
           <h2 id="timetableTitle">
             Timetable
           </h2>
+
 
           <p
             class="page-intro"
@@ -228,6 +583,8 @@
 
       </div>
 
+
+      <!-- TIMETABLE -->
 
       <div
         id="timetableContainer"
@@ -243,15 +600,20 @@
 
       </div>
 
+
     </section>
 
 
-    <!-- SUMMARY -->
+    <!-- =================================================
+         SUMMARY
+         NOT PRINTED
+    ================================================== -->
 
     <section
       class="metric-grid"
       style="margin-top:24px;"
     >
+
 
       <div class="metric-card">
 
@@ -260,6 +622,7 @@
           <span class="metric-label">
             Scheduled Classes
           </span>
+
 
           <strong id="scheduledCount">
             0
@@ -278,6 +641,7 @@
             Lectures
           </span>
 
+
           <strong id="lectureCount">
             0
           </strong>
@@ -294,6 +658,7 @@
           <span class="metric-label">
             Tutorials
           </span>
+
 
           <strong id="tutorialCount">
             0
@@ -312,6 +677,7 @@
             Labs
           </span>
 
+
           <strong id="labCount">
             0
           </strong>
@@ -320,7 +686,9 @@
 
       </div>
 
+
     </section>
+
 
   </main>
 
@@ -332,5 +700,7 @@
   src="js/timetable.js"
 ></script>
 
+
 </body>
+
 </html>
