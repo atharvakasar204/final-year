@@ -1,3 +1,260 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Substitute Faculty | Timely</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="css/style.css"></head>
-<body class="app-page" data-page="substitute"><div class="app-shell"><aside class="app-sidebar" id="appSidebar"></aside><main class="app-content placeholder-content" id="protectedContent" hidden><p class="page-eyebrow">Attendance cover</p><h1>Substitute Faculty</h1><p class="page-intro">Record absences and find qualified, available substitute faculty.</p><div class="placeholder-card"><span>07</span><h2>Substitution tools are planned</h2><p>This protected page will be built after timetable generation and clash checks.</p></div></main></div><script type="module" src="js/protected-page.js"></script></body></html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Substitute Faculty | Timely</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="app-page" data-page="substitute">
+
+<div class="app-shell">
+
+  <aside
+    class="app-sidebar"
+    id="appSidebar"
+  ></aside>
+
+
+  <main
+    class="app-content"
+    id="protectedContent"
+    hidden
+  >
+
+    <p class="page-eyebrow">
+      Faculty management
+    </p>
+
+
+    <div class="app-header">
+
+      <div>
+
+        <h1>
+          Substitute Faculty
+        </h1>
+
+        <p class="page-intro">
+          Find and assign a free faculty member when a teacher is absent.
+        </p>
+
+      </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         ABSENCE DETAILS
+    ====================================================== -->
+
+    <section
+      class="dashboard-card"
+      style="padding:24px;"
+    >
+
+      <div class="card-heading">
+
+        <div>
+
+          <p class="section-label">
+            Absence details
+          </p>
+
+          <h2>
+            Select Absent Faculty
+          </h2>
+
+        </div>
+
+      </div>
+
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:repeat(3,minmax(0,1fr));
+          gap:16px;
+          margin-top:22px;
+        "
+      >
+
+        <!-- Academic Year -->
+
+        <div class="form-field">
+
+          <label for="academicYear">
+            Academic Year
+          </label>
+
+          <select id="academicYear">
+
+            <option value="2026-27">
+              2026-27
+            </option>
+
+            <option value="2025-26">
+              2025-26
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <!-- Day -->
+
+        <div class="form-field">
+
+          <label for="day">
+            Day
+          </label>
+
+          <select id="day">
+
+            <option value="Monday">
+              Monday
+            </option>
+
+            <option value="Tuesday">
+              Tuesday
+            </option>
+
+            <option value="Wednesday" selected>
+              Wednesday
+            </option>
+
+            <option value="Thursday">
+              Thursday
+            </option>
+
+            <option value="Friday">
+              Friday
+            </option>
+
+            <option value="Saturday">
+              Saturday
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <!-- Absent Faculty -->
+
+        <div class="form-field">
+
+          <label for="absentFaculty">
+            Absent Faculty
+          </label>
+
+          <select id="absentFaculty">
+
+            <option value="">
+              Select faculty
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <div style="margin-top:20px;">
+
+        <button
+          type="button"
+          class="primary-button"
+          id="findClassesButton"
+        >
+          Find Classes
+        </button>
+
+      </div>
+
+
+      <div
+        id="substituteMessage"
+        class="form-message"
+      ></div>
+
+    </section>
+
+
+    <!-- =====================================================
+         CLASSES OF ABSENT FACULTY
+    ====================================================== -->
+
+    <section
+      class="dashboard-card"
+      style="
+        padding:24px;
+        margin-top:24px;
+      "
+    >
+
+      <div class="card-heading">
+
+        <div>
+
+          <p class="section-label">
+            Today's classes
+          </p>
+
+          <h2>
+            Classes of Absent Faculty
+          </h2>
+
+          <p
+            class="page-intro"
+            id="classSummary"
+          >
+            Select a faculty and day to view their classes.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div
+        id="classList"
+        style="margin-top:22px;"
+      >
+
+        <div class="empty-state">
+
+          No faculty selected.
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+  </main>
+
+</div>
+
+
+<script
+  type="module"
+  src="js/substitute.js"
+></script>
+
+</body>
+</html>
